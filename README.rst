@@ -16,9 +16,7 @@
 django-entity-event
 ===============
 
-
-I have failed to provide a good README.rst in my project, and you should shun
-me if I do any pull requests
+Newsfeed-style event tracking and subscription management for django-entity.
 
 Installation
 ------------

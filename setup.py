@@ -20,7 +20,7 @@ def get_version():
 setup(
     name='django-entity-event',
     version=get_version(),
-    description='',
+    description='Newsfeed-style event tracking and subscription management for django-entity.',
     long_description=open('README.rst').read(),
     url='https://github.com/ambitioninc/django-entity-event',
     author='Erik Swanson',
@@ -40,6 +40,7 @@ setup(
     license='MIT',
     install_requires=[
         'django>=1.6',
+        'django-entity>=1.7.1',
     ],
     tests_require=[
         'psycopg2',
