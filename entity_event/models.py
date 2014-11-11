@@ -1,5 +1,7 @@
 from django.db import models
 
+from entity.models import Entity, EntityKind
+
 
 class Medium(models.Model):
     name = models.CharField(max_length=64, unique=True)
@@ -33,7 +35,7 @@ class Subscription(models.Model):
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
     entity = models.ForeignKey(Entity)
-    subentity_type = models.ForeignKey(ContentType, null=True)
+    subentity_kind = models.ForeignKey(EntityKind, null=True)
 
     def __unicode__(self):
         s = '{entity} to {source} by {medium}'
@@ -57,9 +59,7 @@ class Unsubscription(models.Model):
 
 
 class Event(models.Model):
-    entity = models.ForeignKey(Entity)
-    subentity_type = models.ForeignKey(ContentType, null=True)
-    source = models.ForeignKey(Source)
+    source = models.ForeignKey('Source')
     context = jsonfield.JSONField()
     time = models.DateTimeField(auto_add_now=True)
     time_expires = models.DateTimeField(null=True, default=None)
@@ -71,10 +71,15 @@ class Event(models.Model):
         time = self.time.strftime('%Y-%m-%d::%H:%M:%S')
         return s.format(source=source, time=time)
 
+class EventActor(models.Model):
+    event = models.ForeignKey('Event')
+    entity = models.ForeignKey(Entity)
+    entity_kind = models.ForeignKey(EntityKind, null=True)
+
 
 class EventSeen(models.Model):
     event = models.ForeignKey('Event')
-    medium = models.ForeignKey(Medium)
+    medium = models.ForeignKey('Medium')
     time_seen = models.DateTimeField(null=True, default=None)
 
     def __unicode__(self):
