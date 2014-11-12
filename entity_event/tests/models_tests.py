@@ -10,6 +10,9 @@ from entity_event.models import (
 )
 
 
+# Note: The following freeze_time adds one second more than what we
+# want to work around a strange off-by-one-second bug in
+# freezegun. I'm not sure what other way to fix it.
 @freeze_time(datetime(2014, 01, 01, 0, 0, 1))
 class UnicodeTest(TestCase):
     def setUp(self):
