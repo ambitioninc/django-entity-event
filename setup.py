@@ -41,6 +41,7 @@ setup(
     install_requires=[
         'django>=1.6',
         'django-entity>=1.7.1',
+        'jsonfield>=1.0'
     ],
     tests_require=[
         'psycopg2',
@@ -48,6 +49,8 @@ setup(
         'south',
         'mock>=1.0.1',
         'coverage>=3.7.1',
+        'freezegun',
+        'django-dynamic-fixture'
     ],
     test_suite='run_tests.run_tests',
     include_package_data=True,

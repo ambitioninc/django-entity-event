@@ -1,6 +1,7 @@
 from django.db import models
+import jsonfield
 
-from entity.models import Entity, EntityKind
+from entity.models import Entity
 
 
 class Medium(models.Model):
@@ -31,20 +32,6 @@ class SourceGroup(models.Model):
         return self.display_name
 
 
-class Subscription(models.Model):
-    medium = models.ForeignKey('Medium')
-    source = models.ForeignKey('Source')
-    entity = models.ForeignKey(Entity)
-    subentity_kind = models.ForeignKey(EntityKind, null=True)
-
-    def __unicode__(self):
-        s = '{entity} to {source} by {medium}'
-        entity = self.entity.__unicode__()
-        source = self.source.__unicode__()
-        medium = self.medium.__unicode__()
-        return s.format(entity=entity, source=source, medium=medium)
-
-
 class Unsubscription(models.Model):
     entity = models.ForeignKey(Entity)
     medium = models.ForeignKey('Medium')
@@ -58,10 +45,21 @@ class Unsubscription(models.Model):
         return s.format(entity=entity, source=source, medium=medium)
 
 
+class EventStream(models.Model):
+    medium = models.ForeignKey('Medium')
+    source = models.ForeignKey('Source')
+
+    def __unicode__(self):
+        s = '{source} by {medium}'
+        source = self.source.__unicode__()
+        medium = self.medium.__unicode__()
+        return s.format(source=source, medium=medium)
+
+
 class Event(models.Model):
     source = models.ForeignKey('Source')
     context = jsonfield.JSONField()
-    time = models.DateTimeField(auto_add_now=True)
+    time = models.DateTimeField(auto_now_add=True)
     time_expires = models.DateTimeField(null=True, default=None)
     uuid = models.CharField(max_length=128, unique=True)
 
@@ -71,10 +69,16 @@ class Event(models.Model):
         time = self.time.strftime('%Y-%m-%d::%H:%M:%S')
         return s.format(source=source, time=time)
 
+
 class EventActor(models.Model):
     event = models.ForeignKey('Event')
     entity = models.ForeignKey(Entity)
-    entity_kind = models.ForeignKey(EntityKind, null=True)
+
+    def __unicode__(self):
+        s = 'Event {eventid} - {entity}'
+        eventid = self.event.id
+        entity = self.entity.__unicode__()
+        return s.format(eventid=eventid, entity=entity)
 
 
 class EventSeen(models.Model):
@@ -83,7 +87,7 @@ class EventSeen(models.Model):
     time_seen = models.DateTimeField(null=True, default=None)
 
     def __unicode__(self):
-        s = 'seen by {medium} at {time}'
+        s = 'Seen on {medium} at {time}'
         medium = self.medium.__unicode__()
         time = self.time_seen.strftime('%Y-%m-%d::%H:%M:%S')
         return s.format(medium=medium, time=time)
