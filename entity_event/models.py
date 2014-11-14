@@ -1,7 +1,9 @@
+from datetime import datetime
+
 from django.db import models
 import jsonfield
 
-from entity.models import Entity
+from entity.models import Entity, EntityKind
 
 
 class Medium(models.Model):
@@ -45,15 +47,19 @@ class Unsubscription(models.Model):
         return s.format(entity=entity, source=source, medium=medium)
 
 
-class EventStream(models.Model):
+class Subscription(models.Model):
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
+    entity = models.ForeignKey(Entity)
+    subentity_kind = models.ForeignKey(EntityKind)
+    only_following = models.BooleanField(default=True)
 
     def __unicode__(self):
-        s = '{source} by {medium}'
+        s = '{entity} to {source} by {medium}'
+        entity = self.entity.__unicode__()
         source = self.source.__unicode__()
         medium = self.medium.__unicode__()
-        return s.format(source=source, medium=medium)
+        return s.format(entity=entity, source=source, medium=medium)
 
 
 class Event(models.Model):
