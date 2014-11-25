@@ -10,6 +10,37 @@ from entity_event.models import (
 )
 
 
+class MediumGetEventFiltersTest(TestCase):
+    def setUp(self):
+        self.medium = G(Medium)
+        with freeze_time('2014-01-15'):
+            e1 = G(Event, context={})
+            G(Event, context={})
+        with freeze_time('2014-01-17'):
+            G(Event, context={}), G(Event, context={}), G(Event, context={})
+        G(EventSeen, event=e1, medium=self.medium)
+
+    def test_start_time(self):
+        filters = self.medium.get_event_filters(datetime(2014, 01, 16), None, None)
+        events = Event.objects.filter(*filters)
+        self.assertEqual(events.count(), 3)
+
+    def test_end_time(self):
+        filters = self.medium.get_event_filters(None, datetime(2014, 01, 16), None)
+        events = Event.objects.filter(*filters)
+        self.assertEqual(events.count(), 2)
+
+    def test_is_seen(self):
+        filters = self.medium.get_event_filters(None, None, True)
+        events = Event.objects.filter(*filters)
+        self.assertEqual(events.count(), 1)
+
+    def test_is_not_seen(self):
+        filters = self.medium.get_event_filters(None, None, False)
+        events = Event.objects.filter(*filters)
+        self.assertEqual(events.count(), 4)
+
+
 class MediumFollowedByTest(TestCase):
     def setUp(self):
         self.medium = N(Medium)
@@ -104,10 +135,11 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
         self.assertEqual(indiv_qs.count(), 1)
 
 
-# Note: The following freeze_time adds one second more than what we
-# want to work around a strange off-by-one-second bug in
-# freezegun. I'm not sure what other way to fix it.
-@freeze_time(datetime(2014, 01, 01, 00, 00, 05))
+# Note: The following freeze_time a few more minutes than what we
+# want, in order to work around a strange off by a few seconds bug in
+# freezegun. I'm not sure what other way to fix it. Since we're only
+# testing unicode representations here, it isn't terribly important.
+@freeze_time(datetime(2014, 01, 01, 00, 10))
 class UnicodeTest(TestCase):
     def setUp(self):
         self.medium = N(Medium, display_name='Test Medium')
@@ -142,9 +174,7 @@ class UnicodeTest(TestCase):
 
     def test_event_formats(self):
         s = unicode(self.event)
-        print self.event.time
-        print datetime.utcnow()
-        self.assertTrue(s.startswith('Test Source event at 2014-01-01::00:00'))
+        self.assertTrue(s.startswith('Test Source event at 2014-01-01'))
 
     def test_eventactor_formats(self):
         s = unicode(self.event_actor)

@@ -115,9 +115,9 @@ class Medium(models.Model):
         #   - `seen==False` gets unseen notifications
         #   - `seen is None` does no seen/unseen filtering
         if seen is True:
-            filters.append(Q(event_seen__medium=self))
+            filters.append(Q(eventseen__medium=self))
         elif seen is False:
-            filters.append(~Q(event_seen__medium=self))
+            filters.append(~Q(eventseen__medium=self))
         return filters
 
     def followed_by(self, entities):
