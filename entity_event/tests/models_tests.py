@@ -10,7 +10,51 @@ from entity_event.models import (
 )
 
 
-class MediumSubsetSubscriptions(TestCase):
+class MediumEventsInterfacesTest(TestCase):
+    def setUp(self):
+        # Set Up Entities and Relationships
+        everyone_kind = G(EntityKind, name='all', display_name='all')
+        group_kind = G(EntityKind, name='group', display_name='Group')
+        person_kind = G(EntityKind, name='person', display_name='Person')
+
+        p1 = G(Entity, entity_kind=person_kind)
+        p2 = G(Entity, entity_kind=person_kind)
+        p3 = G(Entity, entity_kind=person_kind)
+        p4 = G(Entity, entity_kind=person_kind)
+
+        g1 = G(Entity, entity_kind=group_kind)
+        g2 = G(Entity, entity_kind=group_kind)
+
+        everyone = G(Entity, entity_kind=everyone_kind)
+
+        for sup, sub in [(g1, p1), (g1, p2), (g2, p3), (g2, p4)]:
+            G(EntityRelationship, super_entity=sup, sub_entity=sub)
+        for p in [p1, p2, p3, p4]:
+            G(EntityRelationship, super_entity=everyone, sub_entity=p)
+
+        # Set up Mediums, Sources, Subscriptions, Events
+        self.medium_x = G(Medium, name='x', display_name='x')
+        self.medium_y = G(Medium, name='y', display_name='y')
+        self.source_a = G(Source, name='a', display_name='a')
+        self.source_b = G(Source, name='b', display_name='b')
+        self.source_c = G(Source, name='c', display_name='c')
+
+        G(Event, source=self.source_a, context={})
+        G(Event, source=self.source_a, context={})
+        G(Event, source=self.source_b, context={})
+        G(Event, source=self.source_c, context={})
+
+        G(Subscription, source=self.source_a, medium=self.medium_x, only_following=False)
+
+    def test_events_basic(self):
+        events = self.medium_x.events()
+        self.assertEqual(events.count(), 2)
+
+    def test_events_only_following(self):
+        pass
+
+
+class MediumSubsetSubscriptionsTest(TestCase):
     def setUp(self):
         person = G(EntityKind, name='person', display_name='Person')
         self.super_e = G(Entity)

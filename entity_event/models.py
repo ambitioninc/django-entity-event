@@ -8,6 +8,7 @@ import jsonfield
 from entity.models import Entity, EntityKind, EntityRelationship
 
 
+# TODO: add mark_seen function
 class Medium(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
@@ -29,7 +30,7 @@ class Medium(models.Model):
                 entities = sub.subscribed_entities()
                 followed_by = self.followed_by(entities)
                 subscription_q_objects.append(
-                    Q(event_actor__in=followed_by, source=sub.source)
+                    Q(eventactor__in=followed_by, source=sub.source)
                 )
             else:
                 subscription_q_objects.append(
@@ -52,7 +53,7 @@ class Medium(models.Model):
             if sub.only_following:
                 followed_by = self.followed_by(entity)
                 subscription_q_objects.append(
-                    Q(event_actor__in=followed_by, source=sub.source)
+                    Q(eventactor__in=followed_by, source=sub.source)
                 )
             else:
                 subscription_q_objects.append(
@@ -75,7 +76,7 @@ class Medium(models.Model):
                 subscribed = sub.subscribed_entities()
                 if sub.only_following:
                     potential_targets = self.followers_of(
-                        event.event_actor_set.values_list('entity__id', flat=True)
+                        event.eventactor_set.values_list('entity__id', flat=True)
                     )
                     subscription_targets = list(Entity.objects.filter(
                         id__in=list(subscribed) + list(potential_targets)))
