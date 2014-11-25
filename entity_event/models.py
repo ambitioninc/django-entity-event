@@ -125,6 +125,8 @@ class Medium(models.Model):
 
         Entities follow themselves, and their super entities.
         """
+        if isinstance(entities, Entity):
+            entities = Entity.objects.filter(id=entities.id)
         super_entities = EntityRelationship.objects.filter(
             sub_entity__in=entities).values_list('super_entity')
         followed_by = Entity.objects.filter(

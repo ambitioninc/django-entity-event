@@ -10,6 +10,39 @@ from entity_event.models import (
 )
 
 
+class MediumFollowedByTest(TestCase):
+    def setUp(self):
+        self.medium = N(Medium)
+        self.superentity = G(Entity)
+        self.sub1, self.sub2 = G(Entity), G(Entity)
+        G(EntityRelationship, super_entity=self.superentity, sub_entity=self.sub1)
+        G(EntityRelationship, super_entity=self.superentity, sub_entity=self.sub2)
+
+    def test_self_in(self):
+        followers = self.medium.followed_by(self.sub1)
+        super_entity_in = followers.filter(id=self.sub1.id).exists()
+        self.assertTrue(super_entity_in)
+
+    def test_super_entities_in(self):
+        followers = self.medium.followed_by(self.sub1)
+        sub_entity_in = followers.filter(id=self.superentity.id).exists()
+        self.assertTrue(sub_entity_in)
+
+    def test_others_not_in(self):
+        followers = self.medium.followed_by(self.sub1)
+        random_entity_in = followers.filter(id=self.sub2.id).exists()
+        self.assertFalse(random_entity_in)
+
+    def test_multiple_inputs_list(self):
+        followers = self.medium.followed_by([self.sub1.id, self.sub2.id])
+        self.assertEqual(followers.count(), 3)
+
+    def test_multiple_inputs_qs(self):
+        entities = Entity.objects.filter(id__in=[self.sub1.id, self.sub2.id])
+        followers = self.medium.followed_by(entities)
+        self.assertEqual(followers.count(), 3)
+
+
 class MediumFollowersOfTest(TestCase):
     def setUp(self):
         self.medium = N(Medium)
