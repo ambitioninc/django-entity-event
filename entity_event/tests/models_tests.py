@@ -1,13 +1,40 @@
 from datetime import datetime
 
 from django.test import TestCase
-from django_dynamic_fixture import N
-from entity.models import Entity
+from django_dynamic_fixture import N, G
+from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
 
 from entity_event.models import (
     Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen
 )
+
+
+class SubscriptionSubscribedEntitiesTest(TestCase):
+    def setUp(self):
+        person_kind = G(EntityKind, name='person', display_name='person')
+        superentity = G(Entity)
+        sub1, sub2 = G(Entity, entity_kind=person_kind), G(Entity, entity_kind=person_kind)
+        G(EntityRelationship, super_entity=superentity, sub_entity=sub1)
+        G(EntityRelationship, super_entity=superentity, sub_entity=sub2)
+
+        self.group_sub = N(Subscription, entity=superentity, sub_entity_kind=person_kind)
+        self.indiv_sub = N(Subscription, entity=superentity, sub_entity_kind=None)
+
+    def test_both_branches_return_queryset(self):
+        group_qs = self.group_sub.subscribed_entities()
+        indiv_qs = self.indiv_sub.subscribed_entities()
+        self.assertEqual(type(group_qs), type(indiv_qs))
+
+    def test_length_group(self):
+        group_qs = self.group_sub.subscribed_entities()
+        print self.group_sub.entity
+        print group_qs
+        self.assertEqual(group_qs.count(), 3)
+
+    def test_length_indiv(self):
+        indiv_qs = self.indiv_sub.subscribed_entities()
+        self.assertEqual(indiv_qs.count(), 1)
 
 
 # Note: The following freeze_time adds one second more than what we

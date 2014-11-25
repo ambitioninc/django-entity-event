@@ -179,7 +179,7 @@ class Subscription(models.Model):
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
     entity = models.ForeignKey(Entity)
-    sub_entity_kind = models.ForeignKey(EntityKind)
+    sub_entity_kind = models.ForeignKey(EntityKind, null=True)
     only_following = models.BooleanField(default=True)
 
     def __unicode__(self):
@@ -193,9 +193,10 @@ class Subscription(models.Model):
         """Return a queryset of all subscribed entities.
         """
         if self.sub_entity_kind is not None:
-            entities = self.entity.sub_relationships.filter(
-                sub_entity__entity_kind=self.sub_entity_kind
-            ).values_list('sub_entity')
+            sub_entities = self.entity.sub_relationships.filter(
+                sub_entity__entity_kind=self.sub_entity_kind).values_list('sub_entity')
+            entities = Entity.objects.filter(
+                Q(id__in=sub_entities) | Q(id=self.entity.id))
         else:
             entities = Entity.objects.filter(id=self.entity.id)
         return entities
