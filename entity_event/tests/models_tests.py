@@ -10,6 +10,40 @@ from entity_event.models import (
 )
 
 
+class MediumFollowersOfTest(TestCase):
+    def setUp(self):
+        self.medium = N(Medium)
+        self.superentity = G(Entity)
+        self.sub1, self.sub2 = G(Entity), G(Entity)
+        self.random_entity = G(Entity)
+        G(EntityRelationship, super_entity=self.superentity, sub_entity=self.sub1)
+        G(EntityRelationship, super_entity=self.superentity, sub_entity=self.sub2)
+
+    def test_self_in(self):
+        followers = self.medium.followers_of(self.superentity)
+        super_entity_in = followers.filter(id=self.superentity.id).exists()
+        self.assertTrue(super_entity_in)
+
+    def test_sub_entities_in(self):
+        followers = self.medium.followers_of(self.superentity)
+        sub_entity_in = followers.filter(id=self.sub1.id).exists()
+        self.assertTrue(sub_entity_in)
+
+    def test_others_not_in(self):
+        followers = self.medium.followers_of(self.superentity)
+        random_entity_in = followers.filter(id=self.random_entity.id).exists()
+        self.assertFalse(random_entity_in)
+
+    def test_multiple_inputs_list(self):
+        followers = self.medium.followers_of([self.sub1.id, self.sub2.id])
+        self.assertEqual(followers.count(), 2)
+
+    def test_multiple_inputs_qs(self):
+        entities = Entity.objects.filter(id__in=[self.sub1.id, self.sub2.id])
+        followers = self.medium.followers_of(entities)
+        self.assertEqual(followers.count(), 2)
+
+
 class SubscriptionSubscribedEntitiesTest(TestCase):
     def setUp(self):
         person_kind = G(EntityKind, name='person', display_name='person')

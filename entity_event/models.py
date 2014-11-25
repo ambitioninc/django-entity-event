@@ -121,7 +121,7 @@ class Medium(models.Model):
         return filters
 
     def followed_by(self, entities):
-        """Return all the entities that the given entities are following.
+        """Return a queyset of the entities that the given entities are following.
 
         Entities follow themselves, and their super entities.
         """
@@ -132,10 +132,12 @@ class Medium(models.Model):
         return followed_by
 
     def followers_of(self, entities):
-        """Return all the entities that follow the given entities.
+        """Return a querset of the entities that follow the given entities.
 
         The followers of an entity are themselves and their sub entities.
         """
+        if isinstance(entities, Entity):
+            entities = Entity.objects.filter(id=entities.id)
         sub_entities = EntityRelationship.objects.filter(
             super_entity__in=entities).values_list('sub_entity')
         followers_of = Entity.objects.filter(
