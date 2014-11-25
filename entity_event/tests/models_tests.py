@@ -17,9 +17,9 @@ class MediumEventsInterfacesTest(TestCase):
         group_kind = G(EntityKind, name='group', display_name='Group')
         person_kind = G(EntityKind, name='person', display_name='Person')
 
-        p1 = G(Entity, entity_kind=person_kind)
-        p2 = G(Entity, entity_kind=person_kind)
-        p3 = G(Entity, entity_kind=person_kind)
+        self.p1 = G(Entity, entity_kind=person_kind)
+        self.p2 = G(Entity, entity_kind=person_kind)
+        self.p3 = G(Entity, entity_kind=person_kind)
         p4 = G(Entity, entity_kind=person_kind)
 
         g1 = G(Entity, entity_kind=group_kind)
@@ -27,31 +27,51 @@ class MediumEventsInterfacesTest(TestCase):
 
         everyone = G(Entity, entity_kind=everyone_kind)
 
-        for sup, sub in [(g1, p1), (g1, p2), (g2, p3), (g2, p4)]:
+        for sup, sub in [(g1, self.p1), (g1, self.p2), (g2, self.p3), (g2, p4)]:
             G(EntityRelationship, super_entity=sup, sub_entity=sub)
-        for p in [p1, p2, p3, p4]:
+        for p in [self.p1, self.p2, self.p3, p4]:
             G(EntityRelationship, super_entity=everyone, sub_entity=p)
 
         # Set up Mediums, Sources, Subscriptions, Events
         self.medium_x = G(Medium, name='x', display_name='x')
         self.medium_y = G(Medium, name='y', display_name='y')
+        self.medium_z = G(Medium, name='z', display_name='z')
         self.source_a = G(Source, name='a', display_name='a')
         self.source_b = G(Source, name='b', display_name='b')
         self.source_c = G(Source, name='c', display_name='c')
 
+        e1 = G(Event, source=self.source_a, context={})
         G(Event, source=self.source_a, context={})
-        G(Event, source=self.source_a, context={})
-        G(Event, source=self.source_b, context={})
-        G(Event, source=self.source_c, context={})
+        e3 = G(Event, source=self.source_b, context={})
+        e4 = G(Event, source=self.source_c, context={})
 
-        G(Subscription, source=self.source_a, medium=self.medium_x, only_following=False)
+        G(EventActor, event=e1, entity=self.p1)
+        G(EventActor, event=e3, entity=self.p2)
+        G(EventActor, event=e4, entity=self.p2)
+        G(EventActor, event=e4, entity=self.p3)
+
+        G(Subscription, source=self.source_a, medium=self.medium_x, only_following=False,
+          entity=everyone, sub_entity_kind=person_kind)
+        G(Subscription, source=self.source_a, medium=self.medium_y, only_following=True,
+          entity=everyone, sub_entity_kind=person_kind)
+        G(Subscription, source=self.source_c, medium=self.medium_z, only_following=True,
+          entity=g1, sub_entity_kind=person_kind)
 
     def test_events_basic(self):
         events = self.medium_x.events()
         self.assertEqual(events.count(), 2)
 
     def test_events_only_following(self):
-        pass
+        events = self.medium_y.events()
+        self.assertEqual(events.count(), 1)
+
+    def test_entity_events_basic(self):
+        events = self.medium_x.entity_events(entity=self.p1)
+        self.assertEqual(events.count(), 2)
+
+    def test_entity_events_only_following(self):
+        events = self.medium_z.entity_events(entity=self.p2)
+        self.assertEqual(events.count(), 1)
 
 
 class MediumSubsetSubscriptionsTest(TestCase):
@@ -199,8 +219,6 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
 
     def test_length_group(self):
         group_qs = self.group_sub.subscribed_entities()
-        print self.group_sub.entity
-        print group_qs
         self.assertEqual(group_qs.count(), 3)
 
     def test_length_indiv(self):

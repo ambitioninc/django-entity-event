@@ -30,7 +30,7 @@ class Medium(models.Model):
                 entities = sub.subscribed_entities()
                 followed_by = self.followed_by(entities)
                 subscription_q_objects.append(
-                    Q(eventactor__in=followed_by, source=sub.source)
+                    Q(eventactor__entity__in=followed_by, source=sub.source)
                 )
             else:
                 subscription_q_objects.append(
@@ -53,7 +53,7 @@ class Medium(models.Model):
             if sub.only_following:
                 followed_by = self.followed_by(entity)
                 subscription_q_objects.append(
-                    Q(eventactor__in=followed_by, source=sub.source)
+                    Q(eventactor__entity__in=followed_by, source=sub.source)
                 )
             else:
                 subscription_q_objects.append(
