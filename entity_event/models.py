@@ -89,15 +89,16 @@ class Medium(models.Model):
                 event_pairs.append((event, targets))
         return event_pairs
 
-    def subset_subscriptions(self, subscriptions, entity):
+    def subset_subscriptions(self, subscriptions, entity=None):
         """Return only subscriptions the given entity is a part of.
         """
         if entity is None:
             return subscriptions
-        super_entities = EntityRelationship.objects.filter(sub_entity=entity)
+        super_entities = EntityRelationship.objects.filter(
+            sub_entity=entity).values_list('super_entity')
         subscriptions = subscriptions.filter(
             Q(entity=entity, sub_entity_kind=None) |
-            Q(entity__in=super_entities, sub_entity_kind=entity.kind)
+            Q(entity__in=super_entities, sub_entity_kind=entity.entity_kind)
         )
         # Todo: add unsubscription checking
         return subscriptions

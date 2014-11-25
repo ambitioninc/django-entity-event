@@ -10,6 +10,35 @@ from entity_event.models import (
 )
 
 
+class MediumSubsetSubscriptions(TestCase):
+    def setUp(self):
+        person = G(EntityKind, name='person', display_name='Person')
+        self.super_e = G(Entity)
+        self.sub_e = G(Entity, entity_kind=person)
+        random = G(Entity)
+        G(EntityRelationship, super_entity=self.super_e, sub_entity=self.sub_e)
+
+        self.medium = G(Medium)
+        self.group_sub = G(Subscription, entity=self.super_e, sub_entity_kind=person)
+        self.indiv_sub = G(Subscription, entity=self.sub_e, sub_entity_kind=None)
+        self.random_sub = G(Subscription, entity=random)
+
+    def test_no_entity(self):
+        all_subs = Subscription.objects.all()
+        subs = self.medium.subset_subscriptions(all_subs)
+        self.assertEqual(subs, all_subs)
+
+    def test_sub_entity(self):
+        all_subs = Subscription.objects.all()
+        subs = self.medium.subset_subscriptions(all_subs, self.sub_e)
+        self.assertEqual(subs.count(), 2)
+
+    def test_super_not_included(self):
+        all_subs = Subscription.objects.all()
+        subs = self.medium.subset_subscriptions(all_subs, self.super_e)
+        self.assertEqual(subs.count(), 0)
+
+
 class MediumGetEventFiltersTest(TestCase):
     def setUp(self):
         self.medium = G(Medium)
