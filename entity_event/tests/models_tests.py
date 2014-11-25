@@ -59,4 +59,3 @@ class UnicodeTest(TestCase):
     def test_event_seenformats(self):
         s = unicode(self.event_seen)
         self.assertEqual(s, 'Seen on Test Medium at 2014-01-02::00:00:00')
-
