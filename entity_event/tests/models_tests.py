@@ -253,7 +253,7 @@ class UnicodeTest(TestCase):
         self.subscription = N(Subscription, entity=self.entity, source=self.source, medium=self.medium)
         self.event = N(Event, source=self.source, context={}, id=1)
         self.event_actor = N(EventActor, event=self.event, entity=self.entity)
-        self.event_seen = N(EventSeen, event=self.event, medium=self.medium, time_seen=datetime(2014, 01, 02))
+        self.event_seen = N(EventSeen, event=self.event, medium=self.medium, time_seen=datetime(2014, 1, 2))
 
     def test_medium_formats(self):
         s = unicode(self.medium)
