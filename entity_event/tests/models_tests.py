@@ -250,6 +250,7 @@ class UnicodeTest(TestCase):
         self.source = N(Source, display_name='Test Source')
         self.source_group = N(SourceGroup, display_name='Test Source Group')
         self.entity = N(Entity, display_name='Test Entity')
+        self.entity_string = text_type(self.entity)
         self.unsubscription = N(Unsubscription, entity=self.entity, medium=self.medium, source=self.source)
         self.subscription = N(Subscription, entity=self.entity, source=self.source, medium=self.medium)
         self.event = N(Event, source=self.source, context={}, id=1)
@@ -270,11 +271,11 @@ class UnicodeTest(TestCase):
 
     def test_unsubscription_formats(self):
         s = text_type(self.unsubscription)
-        self.assertEqual(s, 'Test Entity from Test Source by Test Medium')
+        self.assertEqual(s, '{0} from Test Source by Test Medium'.format(self.entity_string))
 
     def test_subscription_formats(self):
         s = text_type(self.subscription)
-        self.assertEqual(s, 'Test Entity to Test Source by Test Medium')
+        self.assertEqual(s, '{0} to Test Source by Test Medium'.format(self.entity_string))
 
     def test_event_formats(self):
         s = text_type(self.event)
@@ -282,7 +283,7 @@ class UnicodeTest(TestCase):
 
     def test_eventactor_formats(self):
         s = text_type(self.event_actor)
-        self.assertEqual(s, 'Event 1 - Test Entity')
+        self.assertEqual(s, 'Event 1 - {0}'.format(self.entity_string))
 
     def test_event_seenformats(self):
         s = text_type(self.event_seen)
