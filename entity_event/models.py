@@ -1,21 +1,23 @@
 from datetime import datetime
 from operator import or_
-from six.moves import reduce
 
 from django.db import models
 from django.db.models import Q
+from django.utils.encoding import python_2_unicode_compatible
 import jsonfield
+from six.moves import reduce
 
 from entity.models import Entity, EntityKind, EntityRelationship
 
 
 # TODO: add mark_seen function
+@python_2_unicode_compatible
 class Medium(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.display_name
 
     def events(self, start_time=None, end_time=None, seen=None):
@@ -154,38 +156,41 @@ class Medium(models.Model):
         return followers_of
 
 
+@python_2_unicode_compatible
 class Source(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
     group = models.ForeignKey('SourceGroup')
 
-    def __unicode__(self):
+    def __str__(self):
         return self.display_name
 
-
+@python_2_unicode_compatible
 class SourceGroup(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
 
-    def __unicode__(self):
+    def __str__(self):
         return self.display_name
 
 
+@python_2_unicode_compatible
 class Unsubscription(models.Model):
     entity = models.ForeignKey(Entity)
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
 
-    def __unicode__(self):
+    def __str__(self):
         s = '{entity} from {source} by {medium}'
-        entity = self.entity.__unicode__()
-        source = self.source.__unicode__()
-        medium = self.medium.__unicode__()
+        entity = self.entity.__str__()
+        source = self.source.__str__()
+        medium = self.medium.__str__()
         return s.format(entity=entity, source=source, medium=medium)
 
 
+@python_2_unicode_compatible
 class Subscription(models.Model):
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
@@ -193,11 +198,11 @@ class Subscription(models.Model):
     sub_entity_kind = models.ForeignKey(EntityKind, null=True)
     only_following = models.BooleanField(default=True)
 
-    def __unicode__(self):
+    def __str__(self):
         s = '{entity} to {source} by {medium}'
-        entity = self.entity.__unicode__()
-        source = self.source.__unicode__()
-        medium = self.medium.__unicode__()
+        entity = self.entity.__str__()
+        source = self.source.__str__()
+        medium = self.medium.__str__()
         return s.format(entity=entity, source=source, medium=medium)
 
     def subscribed_entities(self):
@@ -213,6 +218,7 @@ class Subscription(models.Model):
         return entities
 
 
+@python_2_unicode_compatible
 class Event(models.Model):
     source = models.ForeignKey('Source')
     context = jsonfield.JSONField()
@@ -220,31 +226,33 @@ class Event(models.Model):
     time_expires = models.DateTimeField(null=True, default=None)
     uuid = models.CharField(max_length=128, unique=True)
 
-    def __unicode__(self):
+    def __str__(self):
         s = '{source} event at {time}'
-        source = self.source.__unicode__()
+        source = self.source.__str__()
         time = self.time.strftime('%Y-%m-%d::%H:%M:%S')
         return s.format(source=source, time=time)
 
 
+@python_2_unicode_compatible
 class EventActor(models.Model):
     event = models.ForeignKey('Event')
     entity = models.ForeignKey(Entity)
 
-    def __unicode__(self):
+    def __str__(self):
         s = 'Event {eventid} - {entity}'
         eventid = self.event.id
-        entity = self.entity.__unicode__()
+        entity = self.entity.__str__()
         return s.format(eventid=eventid, entity=entity)
 
 
+@python_2_unicode_compatible
 class EventSeen(models.Model):
     event = models.ForeignKey('Event')
     medium = models.ForeignKey('Medium')
     time_seen = models.DateTimeField(default=datetime.utcnow)
 
-    def __unicode__(self):
+    def __str__(self):
         s = 'Seen on {medium} at {time}'
-        medium = self.medium.__unicode__()
+        medium = self.medium.__str__()
         time = self.time_seen.strftime('%Y-%m-%d::%H:%M:%S')
         return s.format(medium=medium, time=time)
