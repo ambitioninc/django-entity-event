@@ -62,7 +62,7 @@ class Medium(models.Model):
         events = events.filter(reduce(or_, subscription_q_objects))
         return events
 
-    def events_targets(self, start_time=None, end_time=None, seen=None):
+    def events_targets(self, entity_kind=None, start_time=None, end_time=None, seen=None):
         """Return all events for this medium, with who is the event is for.
         """
         event_filters = self.get_event_filters(start_time, end_time, seen)
@@ -73,19 +73,23 @@ class Medium(models.Model):
         for event in events:
             targets = []
             for sub in subscriptions:
+                if event.source != sub.source:
+                    continue
                 subscribed = sub.subscribed_entities()
                 if sub.only_following:
                     potential_targets = self.followers_of(
                         event.eventactor_set.values_list('entity__id', flat=True)
                     )
                     subscription_targets = list(Entity.objects.filter(
-                        id__in=list(subscribed) + list(potential_targets)))
+                        Q(id__in=subscribed), Q(id__in=potential_targets)))
                 else:
                     subscription_targets = list(subscribed)
                 targets.extend(subscription_targets)
             unsubed = Unsubscription.objects.filter(
                 source=event.source, medium=self).values_list('entity', flat=True)
             targets = [t for t in targets if t not in unsubed]
+            if entity_kind:
+                targets = [t for t in targets if t.entity_kind == entity_kind]
             if targets:
                 event_pairs.append((event, targets))
         return event_pairs

@@ -15,12 +15,12 @@ class MediumEventsInterfacesTest(TestCase):
         # Set Up Entities and Relationships
         everyone_kind = G(EntityKind, name='all', display_name='all')
         group_kind = G(EntityKind, name='group', display_name='Group')
-        person_kind = G(EntityKind, name='person', display_name='Person')
+        self.person_kind = G(EntityKind, name='person', display_name='Person')
 
-        self.p1 = G(Entity, entity_kind=person_kind)
-        self.p2 = G(Entity, entity_kind=person_kind)
-        self.p3 = G(Entity, entity_kind=person_kind)
-        p4 = G(Entity, entity_kind=person_kind)
+        self.p1 = G(Entity, entity_kind=self.person_kind, display_name='p1')
+        self.p2 = G(Entity, entity_kind=self.person_kind, display_name='p2')
+        self.p3 = G(Entity, entity_kind=self.person_kind, display_name='p3')
+        p4 = G(Entity, entity_kind=self.person_kind, display_name='p4')
 
         g1 = G(Entity, entity_kind=group_kind)
         g2 = G(Entity, entity_kind=group_kind)
@@ -51,11 +51,11 @@ class MediumEventsInterfacesTest(TestCase):
         G(EventActor, event=e4, entity=self.p3)
 
         G(Subscription, source=self.source_a, medium=self.medium_x, only_following=False,
-          entity=everyone, sub_entity_kind=person_kind)
+          entity=everyone, sub_entity_kind=self.person_kind)
         G(Subscription, source=self.source_a, medium=self.medium_y, only_following=True,
-          entity=everyone, sub_entity_kind=person_kind)
+          entity=everyone, sub_entity_kind=self.person_kind)
         G(Subscription, source=self.source_c, medium=self.medium_z, only_following=True,
-          entity=g1, sub_entity_kind=person_kind)
+          entity=g1, sub_entity_kind=self.person_kind)
 
     def test_events_basic(self):
         events = self.medium_x.events()
@@ -72,6 +72,18 @@ class MediumEventsInterfacesTest(TestCase):
     def test_entity_events_only_following(self):
         events = self.medium_z.entity_events(entity=self.p2)
         self.assertEqual(events.count(), 1)
+
+    def test_entity_targets_basic(self):
+        events_targets = self.medium_x.events_targets()
+        self.assertEqual(len(events_targets), 2)
+
+    def test_entity_targets_target_count(self):
+        events_targets = self.medium_x.events_targets(entity_kind=self.person_kind)
+        self.assertEqual(len(events_targets[0][1]), 4)
+
+    def test_entity_targets_only_following(self):
+        events_targets = self.medium_z.events_targets(entity_kind=self.person_kind)
+        self.assertEqual(len(events_targets[0][1]), 1)
 
 
 class MediumSubsetSubscriptionsTest(TestCase):
