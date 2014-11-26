@@ -166,6 +166,7 @@ class Source(models.Model):
     def __str__(self):
         return self.display_name
 
+
 @python_2_unicode_compatible
 class SourceGroup(models.Model):
     name = models.CharField(max_length=64, unique=True)
