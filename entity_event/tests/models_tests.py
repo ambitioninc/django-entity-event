@@ -126,12 +126,12 @@ class MediumGetEventFiltersTest(TestCase):
         G(EventSeen, event=e1, medium=self.medium)
 
     def test_start_time(self):
-        filters = self.medium.get_event_filters(datetime(2014, 01, 16), None, None)
+        filters = self.medium.get_event_filters(datetime(2014, 1, 16), None, None)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 3)
 
     def test_end_time(self):
-        filters = self.medium.get_event_filters(None, datetime(2014, 01, 16), None)
+        filters = self.medium.get_event_filters(None, datetime(2014, 1, 16), None)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 2)
 
@@ -242,7 +242,7 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
 # want, in order to work around a strange off by a few seconds bug in
 # freezegun. I'm not sure what other way to fix it. Since we're only
 # testing unicode representations here, it isn't terribly important.
-@freeze_time(datetime(2014, 01, 01, 00, 10))
+@freeze_time(datetime(2014, 1, 1, 0, 10))
 class UnicodeTest(TestCase):
     def setUp(self):
         self.medium = N(Medium, display_name='Test Medium')
