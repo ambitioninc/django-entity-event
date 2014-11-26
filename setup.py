@@ -41,7 +41,8 @@ setup(
     install_requires=[
         'django>=1.6',
         'django-entity>=1.7.1',
-        'jsonfield>=1.0'
+        'jsonfield>=1.0',
+        'six'
     ],
     tests_require=[
         'psycopg2',

@@ -4,6 +4,7 @@ from django.test import TestCase
 from django_dynamic_fixture import N, G
 from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
+from six import text_type
 
 from entity_event.models import (
     Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen
@@ -256,33 +257,33 @@ class UnicodeTest(TestCase):
         self.event_seen = N(EventSeen, event=self.event, medium=self.medium, time_seen=datetime(2014, 1, 2))
 
     def test_medium_formats(self):
-        s = unicode(self.medium)
+        s = text_type(self.medium)
         self.assertEqual(s, 'Test Medium')
 
     def test_source_formats(self):
-        s = unicode(self.source)
+        s = text_type(self.source)
         self.assertEqual(s, 'Test Source')
 
     def test_sourcegroup_formats(self):
-        s = unicode(self.source_group)
+        s = text_type(self.source_group)
         self.assertEqual(s, 'Test Source Group')
 
     def test_unsubscription_formats(self):
-        s = unicode(self.unsubscription)
+        s = text_type(self.unsubscription)
         self.assertEqual(s, 'Test Entity from Test Source by Test Medium')
 
     def test_subscription_formats(self):
-        s = unicode(self.subscription)
+        s = text_type(self.subscription)
         self.assertEqual(s, 'Test Entity to Test Source by Test Medium')
 
     def test_event_formats(self):
-        s = unicode(self.event)
+        s = text_type(self.event)
         self.assertTrue(s.startswith('Test Source event at 2014-01-01'))
 
     def test_eventactor_formats(self):
-        s = unicode(self.event_actor)
+        s = text_type(self.event_actor)
         self.assertEqual(s, 'Event 1 - Test Entity')
 
     def test_event_seenformats(self):
-        s = unicode(self.event_seen)
+        s = text_type(self.event_seen)
         self.assertEqual(s, 'Seen on Test Medium at 2014-01-02::00:00:00')

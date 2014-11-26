@@ -1,5 +1,6 @@
 from datetime import datetime
 from operator import or_
+from six.moves import reduce
 
 from django.db import models
 from django.db.models import Q
