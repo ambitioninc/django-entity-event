@@ -6,5 +6,6 @@ Table of Contents
 
    index
    installation
+   ref/entity_event
    contributing
    release_notes
