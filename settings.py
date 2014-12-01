@@ -42,6 +42,7 @@ def configure_settings():
                 'django.contrib.sessions',
                 'django.contrib.admin',
                 'south',
+                'entity',
                 'entity_event',
                 'entity_event.tests',
             ),
