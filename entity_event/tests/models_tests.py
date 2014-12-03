@@ -11,6 +11,55 @@ from entity_event.models import (
 )
 
 
+class SubscriptionFilterNotSubscribedTest(TestCase):
+    def setUp(self):
+        self.super_ek = G(EntityKind)
+        self.sub_ek = G(EntityKind)
+        self.super_e1 = G(Entity, entity_kind=self.super_ek)
+        self.super_e2 = G(Entity, entity_kind=self.super_ek)
+        self.sub_e1 = G(Entity, entity_kind=self.sub_ek)
+        self.sub_e2 = G(Entity, entity_kind=self.sub_ek)
+        self.sub_e3 = G(Entity, entity_kind=self.sub_ek)
+        self.sub_e4 = G(Entity, entity_kind=self.sub_ek)
+        self.ind_e1 = G(Entity, entity_kind=self.sub_ek)
+        self.ind_e2 = G(Entity, entity_kind=self.sub_ek)
+        self.medium = G(Medium)
+        self.source = G(Source)
+        G(EntityRelationship, sub_entity=self.sub_e1, super_entity=self.super_e1)
+        G(EntityRelationship, sub_entity=self.sub_e2, super_entity=self.super_e1)
+        G(EntityRelationship, sub_entity=self.sub_e3, super_entity=self.super_e2)
+        G(EntityRelationship, sub_entity=self.sub_e4, super_entity=self.super_e2)
+
+    def test_group_and_individual_subscription(self):
+        G(Subscription, entity=self.ind_e1, source=self.source, medium=self.medium, sub_entity_kind=None)
+        G(Subscription, entity=self.super_e1, source=self.source, medium=self.medium, sub_entity_kind=self.sub_ek)
+        entities = [self.sub_e1, self.sub_e3, self.ind_e1, self.ind_e2]
+        filtered_entities = Subscription.objects.filter_not_subscribed(self.source, self.medium, entities)
+        expected_entity_ids = [self.sub_e1.id, self.ind_e1.id]
+        self.assertEqual(set(filtered_entities.values_list('id', flat=True)), set(expected_entity_ids))
+
+    def test_unsubscribe_filtered_out(self):
+        G(Subscription, entity=self.ind_e1, source=self.source, medium=self.medium, sub_entity_kind=None)
+        G(Subscription, entity=self.super_e1, source=self.source, medium=self.medium, sub_entity_kind=self.sub_ek)
+        G(Unsubscription, entity=self.sub_e1, source=self.source, medium=self.medium)
+        entities = [self.sub_e1, self.sub_e2, self.sub_e3, self.ind_e1, self.ind_e2]
+        filtered_entities = Subscription.objects.filter_not_subscribed(self.source, self.medium, entities)
+        expected_entity_ids = [self.sub_e2.id, self.ind_e1.id]
+        self.assertEqual(set(filtered_entities.values_list('id', flat=True)), set(expected_entity_ids))
+
+    def test_entities_not_passed_in_filtered(self):
+        G(Subscription, entity=self.ind_e1, source=self.source, medium=self.medium, sub_entity_kind=None)
+        G(Subscription, entity=self.super_e1, source=self.source, medium=self.medium, sub_entity_kind=self.sub_ek)
+        entities = [se for se in self.super_e1.get_sub_entities() if se.entity_kind == self.sub_ek]
+        filtered_entities = Subscription.objects.filter_not_subscribed(self.source, self.medium, entities)
+        self.assertEqual(set(filtered_entities), set(entities))
+
+    def test_different_entity_kinds_raises_error(self):
+        entities = [self.sub_e1, self.super_e1]
+        with self.assertRaises(ValueError):
+            Subscription.objects.filter_not_subscribed(self.source, self.medium, entities)
+
+
 class MediumEventsInterfacesTest(TestCase):
     def setUp(self):
         # Set Up Entities and Relationships
@@ -232,7 +281,7 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
 
     def test_length_group(self):
         group_qs = self.group_sub.subscribed_entities()
-        self.assertEqual(group_qs.count(), 3)
+        self.assertEqual(group_qs.count(), 2)
 
     def test_length_indiv(self):
         indiv_qs = self.indiv_sub.subscribed_entities()

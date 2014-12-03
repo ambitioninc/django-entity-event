@@ -78,6 +78,7 @@ class Medium(models.Model):
             for sub in subscriptions:
                 if event.source != sub.source:
                     continue
+
                 subscribed = sub.subscribed_entities()
                 if sub.only_following:
                     potential_targets = self.followers_of(
@@ -87,14 +88,18 @@ class Medium(models.Model):
                         Q(id__in=subscribed), Q(id__in=potential_targets)))
                 else:
                     subscription_targets = list(subscribed)
+
                 targets.extend(subscription_targets)
+
             unsubed = Unsubscription.objects.filter(
                 source=event.source, medium=self).values_list('entity', flat=True)
             targets = [t for t in targets if t not in unsubed]
+
             if entity_kind:
                 targets = [t for t in targets if t.entity_kind == entity_kind]
             if targets:
                 event_pairs.append((event, targets))
+
         return event_pairs
 
     def subset_subscriptions(self, subscriptions, entity=None):
@@ -191,13 +196,60 @@ class Unsubscription(models.Model):
         return s.format(entity=entity, source=source, medium=medium)
 
 
+class SubscriptionManager(models.Manager):
+    def filter_not_subscribed(self, source, medium, entities):
+        """Return only the entities subscribed to the source and medium.
+        Args:
+          source - A `Source` object. Check that there is a
+          subscription for this source and the given medium.
+          medium - A `Medium` object. Check that there is a
+          subscription for this medium and the given source
+          entities - An iterable of `Entity` objects. The iterable
+          will be filtered down to only those with a subscription to
+          the source and medium. All entities in this iterable must be
+          of the same type.
+        Raises:
+          ValueError - if not all entities provided are of the same
+          type.
+        Returns:
+          A queryset of entities which are in the initially provided
+          list and are subscribed to the source and medium.
+        """
+        entity_kind_id = entities[0].entity_kind_id
+        if not all(e.entity_kind_id == entity_kind_id for e in entities):
+            msg = 'All entities provided must be of the same kind.'
+            raise ValueError(msg)
+
+        group_subs = self.filter(source=source, medium=medium, sub_entity_kind_id=entity_kind_id)
+        group_subscribed_entities = EntityRelationship.objects.filter(
+            sub_entity__in=entities, super_entity__in=group_subs.values('entity')
+        ).values_list('sub_entity', flat=True)
+
+        individual_subs = self.filter(
+            source=source, medium=medium, sub_entity_kind=None
+        ).values_list('entity', flat=True)
+
+        relevant_unsubscribes = Unsubscription.objects.filter(
+            source=source, medium=medium, entity__in=entities
+        ).values_list('entity', flat=True)
+
+        subscribed_entities = Entity.objects.filter(
+            Q(pk__in=group_subscribed_entities) | Q(pk__in=individual_subs),
+            id__in=[e.id for e in entities]
+        ).exclude(pk__in=relevant_unsubscribes)
+
+        return subscribed_entities
+
+
 @python_2_unicode_compatible
 class Subscription(models.Model):
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
-    entity = models.ForeignKey(Entity)
-    sub_entity_kind = models.ForeignKey(EntityKind, null=True)
+    entity = models.ForeignKey(Entity, related_name='+')
+    sub_entity_kind = models.ForeignKey(EntityKind, null=True, related_name='+', default=None)
     only_following = models.BooleanField(default=True)
+
+    objects = SubscriptionManager()
 
     def __str__(self):
         s = '{entity} to {source} by {medium}'
@@ -212,8 +264,7 @@ class Subscription(models.Model):
         if self.sub_entity_kind is not None:
             sub_entities = self.entity.sub_relationships.filter(
                 sub_entity__entity_kind=self.sub_entity_kind).values_list('sub_entity')
-            entities = Entity.objects.filter(
-                Q(id__in=sub_entities) | Q(id=self.entity.id))
+            entities = Entity.objects.filter(id__in=sub_entities)
         else:
             entities = Entity.objects.filter(id=self.entity.id)
         return entities
