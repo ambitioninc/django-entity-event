@@ -195,8 +195,8 @@ class Unsubscription(models.Model):
 class Subscription(models.Model):
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
-    entity = models.ForeignKey(Entity)
-    sub_entity_kind = models.ForeignKey(EntityKind, null=True)
+    entity = models.ForeignKey(Entity, related_name='+')
+    sub_entity_kind = models.ForeignKey(EntityKind, null=True, related_name='+')
     only_following = models.BooleanField(default=True)
 
     def __str__(self):
