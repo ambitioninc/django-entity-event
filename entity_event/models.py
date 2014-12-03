@@ -3,7 +3,7 @@ from datetime import datetime
 from operator import or_
 
 from cached_property import cached_property
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.utils.encoding import python_2_unicode_compatible
@@ -23,6 +23,7 @@ class Medium(models.Model):
     def __str__(self):
         return self.display_name
 
+    @transaction.atomic
     def events(self, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return subscribed events, with basic filters.
         """
@@ -44,6 +45,7 @@ class Medium(models.Model):
         events = events.filter(reduce(or_, subscription_q_objects))
         return events
 
+    @transaction.atomic
     def entity_events(self, entity, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return subscribed events for a given entity.
         """
@@ -69,8 +71,9 @@ class Medium(models.Model):
             if self.filter_event_targets_by_unsubscription(event, [entity])
         ]
 
+    @transaction.atomic
     def events_targets(self, entity_kind=None, start_time=None, end_time=None, seen=None, mark_seen=False):
-        """Return all events for this medium, with who is the event is for.
+        """Return all events for this medium, with who the event is for.
         """
         events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
@@ -135,16 +138,6 @@ class Medium(models.Model):
         unsubscriptions = self.unsubscriptions
         return [t for t in targets if t.id not in unsubscriptions[event.source_id]]
 
-    def get_filtered_events(self, start_time, end_time, seen, mark_seen):
-        """
-        Retrieves events with time or seen filters and also marks them as seen if necessary.
-        """
-        event_filters = self.get_event_filters(start_time, end_time, seen)
-        events = Event.objects.filter(*event_filters)
-        if seen is False and mark_seen:
-            events.mark_seen(self)
-        return events
-
     def get_event_filters(self, start_time, end_time, seen):
         """Return Q objects to filter events table.
         """
@@ -162,6 +155,22 @@ class Medium(models.Model):
         elif seen is False:
             filters.append(~Q(eventseen__medium=self))
         return filters
+
+    def get_filtered_events(self, start_time, end_time, seen, mark_seen):
+        """
+        Retrieves events with time or seen filters and also marks them as seen if necessary.
+        """
+        event_filters = self.get_event_filters(start_time, end_time, seen)
+        events = Event.objects.filter(*event_filters)
+        if seen is False and mark_seen:
+            # Evaluate the event qset here and create a new queryset that is no longer filtered by
+            # if the events are marked as seen. We do this because we want to mark the events
+            # as seen in the next line of code. If we didn't evaluate the qset here first, it result
+            # in not returning unseen events since they are marked as seen.
+            events = Event.objects.filter(id__in=list(e.id for e in events))
+            events.mark_seen(self)
+
+        return events
 
     def followed_by(self, entities):
         """Return a queyset of the entities that the given entities are following.
@@ -314,7 +323,7 @@ class EventManager(models.Manager):
         return EventQuerySet(self.model)
 
     def mark_seen(self, medium):
-        return self.get_queryset().mark_seen()
+        return self.get_queryset().mark_seen(medium)
 
 
 @python_2_unicode_compatible

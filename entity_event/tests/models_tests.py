@@ -11,6 +11,15 @@ from entity_event.models import (
 )
 
 
+class EventManagerTest(TestCase):
+    def test_mark_seen(self):
+        event = G(Event, context={})
+        medium = G(Medium)
+        Event.objects.mark_seen(medium)
+        self.assertEqual(EventSeen.objects.count(), 1)
+        self.assertTrue(EventSeen.objects.filter(event=event, medium=medium).exists())
+
+
 class SubscriptionFilterNotSubscribedTest(TestCase):
     def setUp(self):
         self.super_ek = G(EntityKind)
@@ -118,6 +127,13 @@ class MediumEventsInterfacesTest(TestCase):
     def test_entity_events_basic(self):
         events = self.medium_x.entity_events(entity=self.p1)
         self.assertEqual(len(events), 2)
+
+    def test_entity_events_basic_mark_seen(self):
+        events = self.medium_x.entity_events(entity=self.p1, seen=False, mark_seen=True)
+        self.assertEqual(len(events), 2)
+        # All unseen events should have been marked as seen, even if they werent related
+        # to the entity
+        self.assertEqual(len(EventSeen.objects.all()), 4)
 
     def test_entity_events_basic_unsubscribed(self):
         G(Unsubscription, entity=self.p1, source=self.source_a, medium=self.medium_x)
