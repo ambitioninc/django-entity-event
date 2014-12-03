@@ -3,6 +3,7 @@ from operator import or_
 
 from django.db import models
 from django.db.models import Q
+from django.db.models.query import QuerySet
 from django.utils.encoding import python_2_unicode_compatible
 import jsonfield
 from six.moves import reduce
@@ -20,11 +21,10 @@ class Medium(models.Model):
     def __str__(self):
         return self.display_name
 
-    def events(self, start_time=None, end_time=None, seen=None):
+    def events(self, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return subscribed events, with basic filters.
         """
-        event_filters = self.get_event_filters(start_time, end_time, seen)
-        events = Event.objects.filter(*event_filters)
+        events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
 
         subscription_q_objects = []
@@ -42,11 +42,10 @@ class Medium(models.Model):
         events = events.filter(reduce(or_, subscription_q_objects))
         return events
 
-    def entity_events(self, entity, start_time=None, end_time=None, seen=None):
+    def entity_events(self, entity, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return subscribed events for a given entity.
         """
-        event_filters = self.get_event_filters(start_time, end_time, seen)
-        events = Event.objects.filter(*event_filters)
+        events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
 
         subscriptions = Subscription.objects.filter(medium=self)
         subscriptions = self.subset_subscriptions(subscriptions, entity)
@@ -65,11 +64,10 @@ class Medium(models.Model):
         events = events.filter(reduce(or_, subscription_q_objects))
         return events
 
-    def events_targets(self, entity_kind=None, start_time=None, end_time=None, seen=None):
+    def events_targets(self, entity_kind=None, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return all events for this medium, with who is the event is for.
         """
-        event_filters = self.get_event_filters(start_time, end_time, seen)
-        events = Event.objects.filter(*event_filters)
+        events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
 
         event_pairs = []
@@ -115,6 +113,16 @@ class Medium(models.Model):
         )
         # Todo: add unsubscription checking
         return subscriptions
+
+    def get_filtered_events(self, start_time, end_time, seen, mark_seen):
+        """
+        Retrieves events with time or seen filters and also marks them as seen if necessary.
+        """
+        event_filters = self.get_event_filters(start_time, end_time, seen)
+        events = Event.objects.filter(*event_filters)
+        if seen is False and mark_seen:
+            events.mark_seen(self)
+        return events
 
     def get_event_filters(self, start_time, end_time, seen):
         """Return Q objects to filter events table.
@@ -270,6 +278,24 @@ class Subscription(models.Model):
         return entities
 
 
+class EventQuerySet(QuerySet):
+    def mark_seen(self, medium):
+        """
+        Creates EventSeen objects for the provided medium for every event in the queryset.
+        """
+        EventSeen.objects.bulk_create([
+            EventSeen(event=event, medium=medium) for event in self
+        ])
+
+
+class EventManager(models.Manager):
+    def get_queryset(self):
+        return EventQuerySet(self.model)
+
+    def mark_seen(self, medium):
+        return self.get_queryset().mark_seen()
+
+
 @python_2_unicode_compatible
 class Event(models.Model):
     source = models.ForeignKey('Source')
@@ -277,6 +303,8 @@ class Event(models.Model):
     time = models.DateTimeField(auto_now_add=True)
     time_expires = models.DateTimeField(null=True, default=None)
     uuid = models.CharField(max_length=128, unique=True)
+
+    objects = EventManager()
 
     def __str__(self):
         s = '{source} event at {time}'
@@ -302,6 +330,9 @@ class EventSeen(models.Model):
     event = models.ForeignKey('Event')
     medium = models.ForeignKey('Medium')
     time_seen = models.DateTimeField(default=datetime.utcnow)
+
+    class Meta:
+        unique_together = ('event', 'medium')
 
     def __str__(self):
         s = 'Seen on {medium} at {time}'
