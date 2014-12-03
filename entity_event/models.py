@@ -42,6 +42,15 @@ class Medium(models.Model):
         events = events.filter(reduce(or_, subscription_q_objects))
         return events
 
+    def filter_event_targets_by_unsubscription(self, event, targets):
+        """
+        Given a list of events and targets, filter the targets by unsubscriptions. Return
+        the filtered list of targets.
+        """
+        unsubed = Unsubscription.objects.filter(
+            source=event.source, medium=self).values_list('entity', flat=True)
+        return [t for t in targets if t.id not in unsubed]
+
     def entity_events(self, entity, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return subscribed events for a given entity.
         """
@@ -61,8 +70,11 @@ class Medium(models.Model):
                 subscription_q_objects.append(
                     Q(source=sub.source)
                 )
-        events = events.filter(reduce(or_, subscription_q_objects))
-        return events
+
+        return [
+            event for event in events.filter(reduce(or_, subscription_q_objects))
+            if self.filter_event_targets_by_unsubscription(event, [entity])
+        ]
 
     def events_targets(self, entity_kind=None, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return all events for this medium, with who is the event is for.
@@ -89,9 +101,7 @@ class Medium(models.Model):
 
                 targets.extend(subscription_targets)
 
-            unsubed = Unsubscription.objects.filter(
-                source=event.source, medium=self).values_list('entity', flat=True)
-            targets = [t for t in targets if t not in unsubed]
+            targets = self.filter_event_targets_by_unsubscription(event, targets)
 
             if entity_kind:
                 targets = [t for t in targets if t.entity_kind == entity_kind]
@@ -111,7 +121,7 @@ class Medium(models.Model):
             Q(entity=entity, sub_entity_kind=None) |
             Q(entity__in=super_entities, sub_entity_kind=entity.entity_kind)
         )
-        # Todo: add unsubscription checking
+
         return subscriptions
 
     def get_filtered_events(self, start_time, end_time, seen, mark_seen):

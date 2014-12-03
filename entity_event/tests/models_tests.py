@@ -117,11 +117,21 @@ class MediumEventsInterfacesTest(TestCase):
 
     def test_entity_events_basic(self):
         events = self.medium_x.entity_events(entity=self.p1)
-        self.assertEqual(events.count(), 2)
+        self.assertEqual(len(events), 2)
+
+    def test_entity_events_basic_unsubscribed(self):
+        G(Unsubscription, entity=self.p1, source=self.source_a, medium=self.medium_x)
+        G(Event, source=self.source_b, context={})
+        G(Subscription, source=self.source_b, medium=self.medium_x, only_following=False,
+          entity=self.p1, sub_entity_kind=None)
+        events = self.medium_x.entity_events(entity=self.p1)
+        self.assertEqual(len(events), 2)
+        for event in events:
+            self.assertEqual(event.source, self.source_b)
 
     def test_entity_events_only_following(self):
         events = self.medium_z.entity_events(entity=self.p2)
-        self.assertEqual(events.count(), 1)
+        self.assertEqual(len(events), 1)
 
     def test_entity_targets_basic(self):
         events_targets = self.medium_x.events_targets()
