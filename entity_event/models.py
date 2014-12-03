@@ -1,6 +1,8 @@
+from collections import defaultdict
 from datetime import datetime
 from operator import or_
 
+from cached_property import cached_property
 from django.db import models
 from django.db.models import Q
 from django.db.models.query import QuerySet
@@ -41,15 +43,6 @@ class Medium(models.Model):
                 )
         events = events.filter(reduce(or_, subscription_q_objects))
         return events
-
-    def filter_event_targets_by_unsubscription(self, event, targets):
-        """
-        Given a list of events and targets, filter the targets by unsubscriptions. Return
-        the filtered list of targets.
-        """
-        unsubed = Unsubscription.objects.filter(
-            source=event.source, medium=self).values_list('entity', flat=True)
-        return [t for t in targets if t.id not in unsubed]
 
     def entity_events(self, entity, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return subscribed events for a given entity.
@@ -123,6 +116,24 @@ class Medium(models.Model):
         )
 
         return subscriptions
+
+    @cached_property
+    def unsubscriptions(self):
+        """
+        Returns the unsubscribed entity IDs for each source as a dict keyed on source_id.
+        """
+        unsubscriptions = defaultdict(list)
+        for unsub in Unsubscription.objects.filter(medium=self).values('entity', 'source'):
+            unsubscriptions[unsub['source']].append(unsub['entity'])
+        return unsubscriptions
+
+    def filter_event_targets_by_unsubscription(self, event, targets):
+        """
+        Given a list of events and targets, filter the targets by unsubscriptions. Return
+        the filtered list of targets.
+        """
+        unsubscriptions = self.unsubscriptions
+        return [t for t in targets if t.id not in unsubscriptions[event.source_id]]
 
     def get_filtered_events(self, start_time, end_time, seen, mark_seen):
         """
