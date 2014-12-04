@@ -225,7 +225,7 @@ class Source(models.Model):
         if self.context_loader:
             return self.get_context_loader_function()(context)
         else:
-            return self.context
+            return context
 
     def clean(self):
         if self.context_loader:
@@ -373,10 +373,7 @@ class Event(models.Model):
         Retrieves the context for this event, passing it through the context loader of
         the source if necessary.
         """
-        if self.source.context_loader:
-            return self.source.get_context_loader_function()(self.context)
-        else:
-            return self.context
+        return self.source.get_context(self.context)
 
     def __str__(self):
         s = '{source} event at {time}'
