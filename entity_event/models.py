@@ -1,9 +1,14 @@
+from collections import defaultdict
 from datetime import datetime
 from operator import or_
 
-from django.db import models
+from cached_property import cached_property
+from django.core.exceptions import ValidationError, ImproperlyConfigured
+from django.db import models, transaction
 from django.db.models import Q
+from django.db.models.query import QuerySet
 from django.utils.encoding import python_2_unicode_compatible
+from django.utils.module_loading import import_by_path
 import jsonfield
 from six.moves import reduce
 
@@ -20,11 +25,11 @@ class Medium(models.Model):
     def __str__(self):
         return self.display_name
 
-    def events(self, start_time=None, end_time=None, seen=None):
+    @transaction.atomic
+    def events(self, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return subscribed events, with basic filters.
         """
-        event_filters = self.get_event_filters(start_time, end_time, seen)
-        events = Event.objects.filter(*event_filters)
+        events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
 
         subscription_q_objects = []
@@ -42,11 +47,11 @@ class Medium(models.Model):
         events = events.filter(reduce(or_, subscription_q_objects))
         return events
 
-    def entity_events(self, entity, start_time=None, end_time=None, seen=None):
+    @transaction.atomic
+    def entity_events(self, entity, start_time=None, end_time=None, seen=None, mark_seen=False):
         """Return subscribed events for a given entity.
         """
-        event_filters = self.get_event_filters(start_time, end_time, seen)
-        events = Event.objects.filter(*event_filters)
+        events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
 
         subscriptions = Subscription.objects.filter(medium=self)
         subscriptions = self.subset_subscriptions(subscriptions, entity)
@@ -62,14 +67,17 @@ class Medium(models.Model):
                 subscription_q_objects.append(
                     Q(source=sub.source)
                 )
-        events = events.filter(reduce(or_, subscription_q_objects))
-        return events
 
-    def events_targets(self, entity_kind=None, start_time=None, end_time=None, seen=None):
-        """Return all events for this medium, with who is the event is for.
+        return [
+            event for event in events.filter(reduce(or_, subscription_q_objects))
+            if self.filter_source_targets_by_unsubscription(event.source_id, [entity])
+        ]
+
+    @transaction.atomic
+    def events_targets(self, entity_kind=None, start_time=None, end_time=None, seen=None, mark_seen=False):
+        """Return all events for this medium, with who the event is for.
         """
-        event_filters = self.get_event_filters(start_time, end_time, seen)
-        events = Event.objects.filter(*event_filters)
+        events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
 
         event_pairs = []
@@ -78,6 +86,7 @@ class Medium(models.Model):
             for sub in subscriptions:
                 if event.source != sub.source:
                     continue
+
                 subscribed = sub.subscribed_entities()
                 if sub.only_following:
                     potential_targets = self.followers_of(
@@ -87,14 +96,16 @@ class Medium(models.Model):
                         Q(id__in=subscribed), Q(id__in=potential_targets)))
                 else:
                     subscription_targets = list(subscribed)
+
                 targets.extend(subscription_targets)
-            unsubed = Unsubscription.objects.filter(
-                source=event.source, medium=self).values_list('entity', flat=True)
-            targets = [t for t in targets if t not in unsubed]
+
+            targets = self.filter_source_targets_by_unsubscription(event.source_id, targets)
+
             if entity_kind:
                 targets = [t for t in targets if t.entity_kind == entity_kind]
             if targets:
                 event_pairs.append((event, targets))
+
         return event_pairs
 
     def subset_subscriptions(self, subscriptions, entity=None):
@@ -108,8 +119,26 @@ class Medium(models.Model):
             Q(entity=entity, sub_entity_kind=None) |
             Q(entity__in=super_entities, sub_entity_kind=entity.entity_kind)
         )
-        # Todo: add unsubscription checking
+
         return subscriptions
+
+    @cached_property
+    def unsubscriptions(self):
+        """
+        Returns the unsubscribed entity IDs for each source as a dict keyed on source_id.
+        """
+        unsubscriptions = defaultdict(list)
+        for unsub in Unsubscription.objects.filter(medium=self).values('entity', 'source'):
+            unsubscriptions[unsub['source']].append(unsub['entity'])
+        return unsubscriptions
+
+    def filter_source_targets_by_unsubscription(self, source_id, targets):
+        """
+        Given a source id and targets, filter the targets by unsubscriptions. Return
+        the filtered list of targets.
+        """
+        unsubscriptions = self.unsubscriptions
+        return [t for t in targets if t.id not in unsubscriptions[source_id]]
 
     def get_event_filters(self, start_time, end_time, seen):
         """Return Q objects to filter events table.
@@ -128,6 +157,22 @@ class Medium(models.Model):
         elif seen is False:
             filters.append(~Q(eventseen__medium=self))
         return filters
+
+    def get_filtered_events(self, start_time, end_time, seen, mark_seen):
+        """
+        Retrieves events with time or seen filters and also marks them as seen if necessary.
+        """
+        event_filters = self.get_event_filters(start_time, end_time, seen)
+        events = Event.objects.filter(*event_filters)
+        if seen is False and mark_seen:
+            # Evaluate the event qset here and create a new queryset that is no longer filtered by
+            # if the events are marked as seen. We do this because we want to mark the events
+            # as seen in the next line of code. If we didn't evaluate the qset here first, it result
+            # in not returning unseen events since they are marked as seen.
+            events = Event.objects.filter(id__in=list(e.id for e in events))
+            events.mark_seen(self)
+
+        return events
 
     def followed_by(self, entities):
         """Return a queyset of the entities that the given entities are following.
@@ -162,6 +207,36 @@ class Source(models.Model):
     display_name = models.CharField(max_length=64)
     description = models.TextField()
     group = models.ForeignKey('SourceGroup')
+    # An optional function path that loads the context of an event and performs
+    # any additional application-specific context fetching before rendering
+    context_loader = models.CharField(max_length=256, default='', blank=True)
+
+    def get_context_loader_function(self):
+        """
+        Returns an imported, callable context loader function.
+        """
+        return import_by_path(self.context_loader)
+
+    def get_context(self, context):
+        """
+        Gets the context for this source by loading it through the source's context
+        loader (if it has one)
+        """
+        if self.context_loader:
+            return self.get_context_loader_function()(context)
+        else:
+            return context
+
+    def clean(self):
+        if self.context_loader:
+            try:
+                self.get_context_loader_function()
+            except ImproperlyConfigured:
+                raise ValidationError('Must provide a loadable context loader')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super(Source, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.display_name
@@ -195,8 +270,8 @@ class Unsubscription(models.Model):
 class Subscription(models.Model):
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
-    entity = models.ForeignKey(Entity)
-    sub_entity_kind = models.ForeignKey(EntityKind, null=True)
+    entity = models.ForeignKey(Entity, related_name='+')
+    sub_entity_kind = models.ForeignKey(EntityKind, null=True, related_name='+', default=None)
     only_following = models.BooleanField(default=True)
 
     def __str__(self):
@@ -212,11 +287,41 @@ class Subscription(models.Model):
         if self.sub_entity_kind is not None:
             sub_entities = self.entity.sub_relationships.filter(
                 sub_entity__entity_kind=self.sub_entity_kind).values_list('sub_entity')
-            entities = Entity.objects.filter(
-                Q(id__in=sub_entities) | Q(id=self.entity.id))
+            entities = Entity.objects.filter(id__in=sub_entities)
         else:
             entities = Entity.objects.filter(id=self.entity.id)
         return entities
+
+
+class EventQuerySet(QuerySet):
+    def mark_seen(self, medium):
+        """
+        Creates EventSeen objects for the provided medium for every event in the queryset.
+        """
+        EventSeen.objects.bulk_create([
+            EventSeen(event=event, medium=medium) for event in self
+        ])
+
+
+class EventManager(models.Manager):
+    def get_queryset(self):
+        return EventQuerySet(self.model)
+
+    def mark_seen(self, medium):
+        return self.get_queryset().mark_seen(medium)
+
+    @transaction.atomic
+    def create_event(self, ignore_duplicates=False, actors=None, **kwargs):
+        """
+        A utility method for creating events with actors.
+        """
+        if ignore_duplicates and self.filter(uuid=kwargs.get('uuid', '')).exists():
+            return None
+
+        event = self.create(**kwargs)
+        actors = actors or []
+        EventActor.objects.bulk_create([EventActor(entity=actor, event=event) for actor in actors])
+        return event
 
 
 @python_2_unicode_compatible
@@ -226,6 +331,15 @@ class Event(models.Model):
     time = models.DateTimeField(auto_now_add=True)
     time_expires = models.DateTimeField(null=True, default=None)
     uuid = models.CharField(max_length=128, unique=True)
+
+    objects = EventManager()
+
+    def get_context(self):
+        """
+        Retrieves the context for this event, passing it through the context loader of
+        the source if necessary.
+        """
+        return self.source.get_context(self.context)
 
     def __str__(self):
         s = '{source} event at {time}'
@@ -251,6 +365,9 @@ class EventSeen(models.Model):
     event = models.ForeignKey('Event')
     medium = models.ForeignKey('Medium')
     time_seen = models.DateTimeField(default=datetime.utcnow)
+
+    class Meta:
+        unique_together = ('event', 'medium')
 
     def __str__(self):
         s = 'Seen on {medium} at {time}'

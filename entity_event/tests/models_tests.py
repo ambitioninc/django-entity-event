@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from django.test import TestCase
+from django.core.exceptions import ValidationError, ImproperlyConfigured
+from django.test import TestCase, SimpleTestCase
 from django_dynamic_fixture import N, G
 from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
@@ -9,6 +10,87 @@ from six import text_type
 from entity_event.models import (
     Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen
 )
+
+
+class EventManagerCreateEventTest(TestCase):
+    def test_create_event_no_actors(self):
+        source = G(Source)
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source)
+        self.assertEqual(e.source, source)
+        self.assertEqual(e.context, {'hi': 'hi'})
+        self.assertEqual(e.uuid, '')
+        self.assertFalse(EventActor.objects.exists())
+
+    def test_create_event_multiple_actors(self):
+        source = G(Source)
+        actors = [G(Entity), G(Entity)]
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, actors=actors, uuid='hi')
+        self.assertEqual(e.source, source)
+        self.assertEqual(e.context, {'hi': 'hi'})
+        self.assertEqual(e.uuid, 'hi')
+        self.assertEqual(
+            set(EventActor.objects.filter(event=e).values_list('entity', flat=True)), set([a.id for a in actors]))
+
+    def test_ignore_duplicates_w_uuid_doesnt_already_exist(self):
+        source = G(Source)
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, uuid='1', ignore_duplicates=True)
+        self.assertIsNotNone(e)
+
+    def test_ignore_duplicates_w_uuid_already_exist(self):
+        source = G(Source)
+        Event.objects.create_event(context={'hi': 'hi'}, source=source, uuid='1', ignore_duplicates=True)
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, uuid='1', ignore_duplicates=True)
+        self.assertIsNone(e)
+
+    def test_ignore_duplicates_wo_uuid_already_exist(self):
+        source = G(Source)
+        Event.objects.create_event(context={'hi': 'hi'}, source=source, ignore_duplicates=True)
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, ignore_duplicates=True)
+        self.assertIsNone(e)
+
+
+def basic_context_loader(context):
+    return {'hello': 'hello'}
+
+
+class SourceGetContextLoaderTest(SimpleTestCase):
+    def test_loads_context_loader(self):
+        template = Source(context_loader='entity_event.tests.models_tests.basic_context_loader')
+        loader_func = template.get_context_loader_function()
+        self.assertEqual(loader_func, basic_context_loader)
+
+    def test_invalid_context_loader(self):
+        template = Source(context_loader='entity_event.tests.models_tests.invalid_context_loader')
+        with self.assertRaises(ImproperlyConfigured):
+            template.get_context_loader_function()
+
+
+class SourceCleanTest(SimpleTestCase):
+    def test_invalid_context_path_does_not_validate(self):
+        with self.assertRaises(ValidationError):
+            Source(context_loader='invalid_path').clean()
+
+
+class EventGetContext(SimpleTestCase):
+    def test_without_context_loader(self):
+        event = N(
+            Event, context={'hi': 'hi'}, persist_dependencies=False, source=N(
+                Source, context_loader='entity_event.tests.models_tests.basic_context_loader',
+                persist_dependencies=False))
+        self.assertEqual(event.get_context(), {'hello': 'hello'})
+
+    def test_with_context_loader(self):
+        event = N(Event, context={'hi': 'hi'}, persist_dependencies=False)
+        self.assertEqual(event.get_context(), {'hi': 'hi'})
+
+
+class EventManagerTest(TestCase):
+    def test_mark_seen(self):
+        event = G(Event, context={})
+        medium = G(Medium)
+        Event.objects.mark_seen(medium)
+        self.assertEqual(EventSeen.objects.count(), 1)
+        self.assertTrue(EventSeen.objects.filter(event=event, medium=medium).exists())
 
 
 class MediumEventsInterfacesTest(TestCase):
@@ -68,11 +150,28 @@ class MediumEventsInterfacesTest(TestCase):
 
     def test_entity_events_basic(self):
         events = self.medium_x.entity_events(entity=self.p1)
-        self.assertEqual(events.count(), 2)
+        self.assertEqual(len(events), 2)
+
+    def test_entity_events_basic_mark_seen(self):
+        events = self.medium_x.entity_events(entity=self.p1, seen=False, mark_seen=True)
+        self.assertEqual(len(events), 2)
+        # All unseen events should have been marked as seen, even if they werent related
+        # to the entity
+        self.assertEqual(len(EventSeen.objects.all()), 4)
+
+    def test_entity_events_basic_unsubscribed(self):
+        G(Unsubscription, entity=self.p1, source=self.source_a, medium=self.medium_x)
+        G(Event, source=self.source_b, context={})
+        G(Subscription, source=self.source_b, medium=self.medium_x, only_following=False,
+          entity=self.p1, sub_entity_kind=None)
+        events = self.medium_x.entity_events(entity=self.p1)
+        self.assertEqual(len(events), 2)
+        for event in events:
+            self.assertEqual(event.source, self.source_b)
 
     def test_entity_events_only_following(self):
         events = self.medium_z.entity_events(entity=self.p2)
-        self.assertEqual(events.count(), 1)
+        self.assertEqual(len(events), 1)
 
     def test_entity_targets_basic(self):
         events_targets = self.medium_x.events_targets()
@@ -232,7 +331,7 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
 
     def test_length_group(self):
         group_qs = self.group_sub.subscribed_entities()
-        self.assertEqual(group_qs.count(), 3)
+        self.assertEqual(group_qs.count(), 2)
 
     def test_length_indiv(self):
         indiv_qs = self.indiv_sub.subscribed_entities()
