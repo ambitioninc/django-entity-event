@@ -217,6 +217,16 @@ class Source(models.Model):
         """
         return import_by_path(self.context_loader)
 
+    def get_context(self, context):
+        """
+        Gets the context for this source by loading it through the source's context
+        loader (if it has one)
+        """
+        if self.context_loader:
+            return self.get_context_loader_function()(context)
+        else:
+            return self.context
+
     def clean(self):
         if self.context_loader:
             try:
