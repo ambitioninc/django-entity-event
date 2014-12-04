@@ -3,10 +3,12 @@ from datetime import datetime
 from operator import or_
 
 from cached_property import cached_property
+from django.core.exceptions import ValidationError, ImproperlyConfigured
 from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.utils.encoding import python_2_unicode_compatible
+from django.utils.module_loading import import_by_path
 import jsonfield
 from six.moves import reduce
 
@@ -205,6 +207,26 @@ class Source(models.Model):
     display_name = models.CharField(max_length=64)
     description = models.TextField()
     group = models.ForeignKey('SourceGroup')
+    # An optional function path that loads the context of an event and performs
+    # any additional application-specific context fetching before rendering
+    context_loader = models.CharField(max_length=256, default='', blank=True)
+
+    def get_context_loader_function(self):
+        """
+        Returns an imported, callable context loader function.
+        """
+        return import_by_path(self.context_loader)
+
+    def clean(self):
+        if self.context_loader:
+            try:
+                self.get_context_loader_function()
+            except ImproperlyConfigured:
+                raise ValidationError('Must provide a loadable context loader')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        return super(Source, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.display_name
@@ -335,6 +357,16 @@ class Event(models.Model):
     uuid = models.CharField(max_length=128, unique=True)
 
     objects = EventManager()
+
+    def get_context(self):
+        """
+        Retrieves the context for this event, passing it through the context loader of
+        the source if necessary.
+        """
+        if self.source.context_loader:
+            return self.source.get_context_loader_function()(self.context)
+        else:
+            return self.context
 
     def __str__(self):
         s = '{source} event at {time}'
