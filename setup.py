@@ -42,7 +42,7 @@ setup(
         'cached-property>=0.1.5',
         'django>=1.6,<1.7',
         'django-entity>=1.7.1',
-        'jsonfield>=1.0',
+        'jsonfield>=0.9.20',
         'six'
     ],
     tests_require=[
