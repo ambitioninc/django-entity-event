@@ -319,6 +319,7 @@ class EventManager(models.Manager):
             return None
 
         event = self.create(**kwargs)
+        actors = actors or []
         EventActor.objects.bulk_create([EventActor(entity=actor, event=event) for actor in actors])
         return event
 
