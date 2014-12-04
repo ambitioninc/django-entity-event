@@ -12,6 +12,43 @@ from entity_event.models import (
 )
 
 
+class EventManagerCreateEventTest(TestCase):
+    def test_create_event_no_actors(self):
+        source = G(Source)
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source)
+        self.assertEqual(e.source, source)
+        self.assertEqual(e.context, {'hi': 'hi'})
+        self.assertEqual(e.uuid, '')
+        self.assertFalse(EventActor.objects.exists())
+
+    def test_create_event_multiple_actors(self):
+        source = G(Source)
+        actors = [G(Entity), G(Entity)]
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, actors=actors, uuid='hi')
+        self.assertEqual(e.source, source)
+        self.assertEqual(e.context, {'hi': 'hi'})
+        self.assertEqual(e.uuid, 'hi')
+        self.assertEqual(
+            set(EventActor.objects.filter(event=e).values_list('entity', flat=True)), set([a.id for a in actors]))
+
+    def test_ignore_duplicates_w_uuid_doesnt_already_exist(self):
+        source = G(Source)
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, uuid='1', ignore_duplicates=True)
+        self.assertIsNotNone(e)
+
+    def test_ignore_duplicates_w_uuid_already_exist(self):
+        source = G(Source)
+        Event.objects.create_event(context={'hi': 'hi'}, source=source, uuid='1', ignore_duplicates=True)
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, uuid='1', ignore_duplicates=True)
+        self.assertIsNone(e)
+
+    def test_ignore_duplicates_wo_uuid_already_exist(self):
+        source = G(Source)
+        Event.objects.create_event(context={'hi': 'hi'}, source=source, ignore_duplicates=True)
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, ignore_duplicates=True)
+        self.assertIsNone(e)
+
+
 def basic_context_loader(context):
     return {'hello': 'hello'}
 

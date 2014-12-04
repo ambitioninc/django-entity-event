@@ -315,7 +315,7 @@ class EventManager(models.Manager):
         """
         A utility method for creating events with actors.
         """
-        if ignore_duplicates and self.filter(uuid=kwargs['uuid']).exists():
+        if ignore_duplicates and self.filter(uuid=kwargs.get('uuid', '')).exists():
             return None
 
         event = self.create(**kwargs)
