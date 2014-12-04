@@ -70,7 +70,7 @@ class Medium(models.Model):
 
         return [
             event for event in events.filter(reduce(or_, subscription_q_objects))
-            if self.filter_event_targets_by_unsubscription(event, [entity])
+            if self.filter_source_targets_by_unsubscription(event.source_id, [entity])
         ]
 
     @transaction.atomic
@@ -99,7 +99,7 @@ class Medium(models.Model):
 
                 targets.extend(subscription_targets)
 
-            targets = self.filter_event_targets_by_unsubscription(event, targets)
+            targets = self.filter_source_targets_by_unsubscription(event.source_id, targets)
 
             if entity_kind:
                 targets = [t for t in targets if t.entity_kind == entity_kind]
@@ -132,13 +132,13 @@ class Medium(models.Model):
             unsubscriptions[unsub['source']].append(unsub['entity'])
         return unsubscriptions
 
-    def filter_event_targets_by_unsubscription(self, event, targets):
+    def filter_source_targets_by_unsubscription(self, source_id, targets):
         """
-        Given a list of events and targets, filter the targets by unsubscriptions. Return
+        Given a source id and targets, filter the targets by unsubscriptions. Return
         the filtered list of targets.
         """
         unsubscriptions = self.unsubscriptions
-        return [t for t in targets if t.id not in unsubscriptions[event.source_id]]
+        return [t for t in targets if t.id not in unsubscriptions[source_id]]
 
     def get_event_filters(self, start_time, end_time, seen):
         """Return Q objects to filter events table.
@@ -266,51 +266,6 @@ class Unsubscription(models.Model):
         return s.format(entity=entity, source=source, medium=medium)
 
 
-class SubscriptionManager(models.Manager):
-    def filter_not_subscribed(self, source, medium, entities):
-        """Return only the entities subscribed to the source and medium.
-        Args:
-          source - A `Source` object. Check that there is a
-          subscription for this source and the given medium.
-          medium - A `Medium` object. Check that there is a
-          subscription for this medium and the given source
-          entities - An iterable of `Entity` objects. The iterable
-          will be filtered down to only those with a subscription to
-          the source and medium. All entities in this iterable must be
-          of the same type.
-        Raises:
-          ValueError - if not all entities provided are of the same
-          type.
-        Returns:
-          A queryset of entities which are in the initially provided
-          list and are subscribed to the source and medium.
-        """
-        entity_kind_id = entities[0].entity_kind_id
-        if not all(e.entity_kind_id == entity_kind_id for e in entities):
-            msg = 'All entities provided must be of the same kind.'
-            raise ValueError(msg)
-
-        group_subs = self.filter(source=source, medium=medium, sub_entity_kind_id=entity_kind_id)
-        group_subscribed_entities = EntityRelationship.objects.filter(
-            sub_entity__in=entities, super_entity__in=group_subs.values('entity')
-        ).values_list('sub_entity', flat=True)
-
-        individual_subs = self.filter(
-            source=source, medium=medium, sub_entity_kind=None
-        ).values_list('entity', flat=True)
-
-        relevant_unsubscribes = Unsubscription.objects.filter(
-            source=source, medium=medium, entity__in=entities
-        ).values_list('entity', flat=True)
-
-        subscribed_entities = Entity.objects.filter(
-            Q(pk__in=group_subscribed_entities) | Q(pk__in=individual_subs),
-            id__in=[e.id for e in entities]
-        ).exclude(pk__in=relevant_unsubscribes)
-
-        return subscribed_entities
-
-
 @python_2_unicode_compatible
 class Subscription(models.Model):
     medium = models.ForeignKey('Medium')
@@ -318,8 +273,6 @@ class Subscription(models.Model):
     entity = models.ForeignKey(Entity, related_name='+')
     sub_entity_kind = models.ForeignKey(EntityKind, null=True, related_name='+', default=None)
     only_following = models.BooleanField(default=True)
-
-    objects = SubscriptionManager()
 
     def __str__(self):
         s = '{entity} to {source} by {medium}'
@@ -356,6 +309,18 @@ class EventManager(models.Manager):
 
     def mark_seen(self, medium):
         return self.get_queryset().mark_seen(medium)
+
+    @transaction.atomic
+    def create_event(self, ignore_duplicates=False, actors=None, **kwargs):
+        """
+        A utility method for creating events with actors.
+        """
+        if ignore_duplicates and self.filter(uuid=kwargs['uuid']).exists():
+            return None
+
+        event = self.create(**kwargs)
+        EventActor.objects.bulk_create([EventActor(entity=actor, event=event) for actor in actors])
+        return event
 
 
 @python_2_unicode_compatible
