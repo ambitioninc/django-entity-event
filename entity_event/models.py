@@ -324,8 +324,14 @@ class EventManager(models.Manager):
             return None
 
         event = self.create(**kwargs)
-        actors = actors or []
-        EventActor.objects.bulk_create([EventActor(entity=actor, event=event) for actor in actors])
+
+        # Allow user to pass pks for actors
+        actors = [
+            a.id if isinstance(a, Entity) else a
+            for a in actors
+        ] if actors else []
+
+        EventActor.objects.bulk_create([EventActor(entity_id=actor, event=event) for actor in actors])
         return event
 
 
