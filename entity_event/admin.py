@@ -40,6 +40,7 @@ class AdminEventForm(forms.ModelForm):
 
 
 class AdminEventAdmin(admin.ModelAdmin):
+    list_display = ('time', 'source')
     form = AdminEventForm
 
 
