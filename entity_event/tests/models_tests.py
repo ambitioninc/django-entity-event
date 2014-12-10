@@ -21,6 +21,16 @@ class EventManagerCreateEventTest(TestCase):
         self.assertEqual(e.uuid, '')
         self.assertFalse(EventActor.objects.exists())
 
+    def test_create_event_multiple_actor_pks(self):
+        source = G(Source)
+        actors = [G(Entity), G(Entity)]
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, actors=[a.id for a in actors], uuid='hi')
+        self.assertEqual(e.source, source)
+        self.assertEqual(e.context, {'hi': 'hi'})
+        self.assertEqual(e.uuid, 'hi')
+        self.assertEqual(
+            set(EventActor.objects.filter(event=e).values_list('entity', flat=True)), set([a.id for a in actors]))
+
     def test_create_event_multiple_actors(self):
         source = G(Source)
         actors = [G(Entity), G(Entity)]
