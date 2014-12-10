@@ -21,6 +21,16 @@ class EventManagerCreateEventTest(TestCase):
         self.assertEqual(e.uuid, '')
         self.assertFalse(EventActor.objects.exists())
 
+    def test_create_event_multiple_actor_pks(self):
+        source = G(Source)
+        actors = [G(Entity), G(Entity)]
+        e = Event.objects.create_event(context={'hi': 'hi'}, source=source, actors=[a.id for a in actors], uuid='hi')
+        self.assertEqual(e.source, source)
+        self.assertEqual(e.context, {'hi': 'hi'})
+        self.assertEqual(e.uuid, 'hi')
+        self.assertEqual(
+            set(EventActor.objects.filter(event=e).values_list('entity', flat=True)), set([a.id for a in actors]))
+
     def test_create_event_multiple_actors(self):
         source = G(Source)
         actors = [G(Entity), G(Entity)]
@@ -220,28 +230,39 @@ class MediumGetEventFiltersTest(TestCase):
         self.medium = G(Medium)
         with freeze_time('2014-01-15'):
             e1 = G(Event, context={})
-            G(Event, context={})
+            G(Event, context={}, time_expires=datetime(5000, 1, 1))
         with freeze_time('2014-01-17'):
-            G(Event, context={}), G(Event, context={}), G(Event, context={})
+            G(Event, context={}), G(Event, context={})
+            G(Event, context={}, time_expires=datetime(2014, 1, 17))
         G(EventSeen, event=e1, medium=self.medium)
 
     def test_start_time(self):
-        filters = self.medium.get_event_filters(datetime(2014, 1, 16), None, None)
+        filters = self.medium.get_event_filters(datetime(2014, 1, 16), None, None, True)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 3)
 
     def test_end_time(self):
-        filters = self.medium.get_event_filters(None, datetime(2014, 1, 16), None)
+        filters = self.medium.get_event_filters(None, datetime(2014, 1, 16), None, True)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 2)
 
     def test_is_seen(self):
-        filters = self.medium.get_event_filters(None, None, True)
+        filters = self.medium.get_event_filters(None, None, True, True)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 1)
 
     def test_is_not_seen(self):
-        filters = self.medium.get_event_filters(None, None, False)
+        filters = self.medium.get_event_filters(None, None, False, True)
+        events = Event.objects.filter(*filters)
+        self.assertEqual(events.count(), 4)
+
+    def test_include_expires(self):
+        filters = self.medium.get_event_filters(None, None, None, True)
+        events = Event.objects.filter(*filters)
+        self.assertEqual(events.count(), 5)
+
+    def test_dont_include_expires(self):
+        filters = self.medium.get_event_filters(None, None, None, False)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 4)
 
@@ -378,7 +399,7 @@ class UnicodeTest(TestCase):
 
     def test_event_formats(self):
         s = text_type(self.event)
-        self.assertTrue(s.startswith('Test Source event at 2014-01-01'))
+        self.assertTrue(s.startswith('Test Source event at 201'))
 
     def test_eventactor_formats(self):
         s = text_type(self.event_actor)
