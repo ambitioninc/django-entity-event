@@ -26,10 +26,10 @@ class Medium(models.Model):
         return self.display_name
 
     @transaction.atomic
-    def events(self, start_time=None, end_time=None, seen=None, mark_seen=False):
+    def events(self, start_time=None, end_time=None, seen=None, include_expired=False, mark_seen=False):
         """Return subscribed events, with basic filters.
         """
-        events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
+        events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
 
         subscription_q_objects = []
@@ -48,10 +48,10 @@ class Medium(models.Model):
         return events
 
     @transaction.atomic
-    def entity_events(self, entity, start_time=None, end_time=None, seen=None, mark_seen=False):
+    def entity_events(self, entity, start_time=None, end_time=None, seen=None, include_expired=False, mark_seen=False):
         """Return subscribed events for a given entity.
         """
-        events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
+        events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
 
         subscriptions = Subscription.objects.filter(medium=self)
         subscriptions = self.subset_subscriptions(subscriptions, entity)
@@ -74,10 +74,12 @@ class Medium(models.Model):
         ]
 
     @transaction.atomic
-    def events_targets(self, entity_kind=None, start_time=None, end_time=None, seen=None, mark_seen=False):
+    def events_targets(
+            self, entity_kind=None, start_time=None, end_time=None,
+            seen=None, include_expired=False, mark_seen=False):
         """Return all events for this medium, with who the event is for.
         """
-        events = self.get_filtered_events(start_time, end_time, seen, mark_seen)
+        events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
 
         event_pairs = []
@@ -140,14 +142,17 @@ class Medium(models.Model):
         unsubscriptions = self.unsubscriptions
         return [t for t in targets if t.id not in unsubscriptions[source_id]]
 
-    def get_event_filters(self, start_time, end_time, seen):
+    def get_event_filters(self, start_time, end_time, seen, include_expired):
         """Return Q objects to filter events table.
         """
+        now = datetime.utcnow()
         filters = []
         if start_time is not None:
             filters.append(Q(time__gte=start_time))
         if end_time is not None:
             filters.append(Q(time__lte=end_time))
+        if not include_expired:
+            filters.append(Q(Q(time_expires__gte=now) | Q(time_expires__isnull=True)))
 
         # Check explicitly for True and False as opposed to None
         #   - `seen==False` gets unseen notifications
@@ -158,11 +163,11 @@ class Medium(models.Model):
             filters.append(~Q(eventseen__medium=self))
         return filters
 
-    def get_filtered_events(self, start_time, end_time, seen, mark_seen):
+    def get_filtered_events(self, start_time, end_time, seen, include_expired, mark_seen):
         """
         Retrieves events with time or seen filters and also marks them as seen if necessary.
         """
-        event_filters = self.get_event_filters(start_time, end_time, seen)
+        event_filters = self.get_event_filters(start_time, end_time, seen, include_expired)
         events = Event.objects.filter(*event_filters)
         if seen is False and mark_seen:
             # Evaluate the event qset here and create a new queryset that is no longer filtered by
@@ -346,6 +351,11 @@ class Event(models.Model):
         source = self.source.__str__()
         time = self.time.strftime('%Y-%m-%d::%H:%M:%S')
         return s.format(source=source, time=time)
+
+
+class AdminEvent(Event):
+    class Meta:
+        proxy = True
 
 
 @python_2_unicode_compatible
