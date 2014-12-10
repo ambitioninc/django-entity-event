@@ -1,10 +1,24 @@
 from django.contrib import admin
 
-from entity_event.models import Medium, Event, Source, SourceGroup, Subscription, Unsubscription
+from entity_event.models import (
+    Event, EventActor, EventSeen, Medium, Source, SourceGroup, Subscription, Unsubscription
+)
+
+
+class EventActorInline(admin.TabularInline):
+    model = EventActor
+
+
+class EventSeenInline(admin.TabularInline):
+    model = EventSeen
 
 
 class EventAdmin(admin.ModelAdmin):
     list_display = ('time', 'source')
+    inlines = [
+        EventActorInline,
+        EventSeenInline
+    ]
 
 
 class MediumAdmin(admin.ModelAdmin):
