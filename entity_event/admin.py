@@ -14,7 +14,7 @@ class AdminEventForm(forms.ModelForm):
     source = forms.ModelChoiceField(queryset=Source.objects.all())  # initial = Source.objects.get(name='admin')
     text = forms.CharField(widget=forms.Textarea(attrs={'rows': '3', 'cols': '60'}))
     expires_date = forms.DateField(widget=SelectDateWidget(), required=False)
-    expires_time = forms.TimeField(label="Expires time (UTC 24 hr) E.g. 18:25", required=False)
+    expires_time = forms.TimeField(label='Expires time (UTC 24 hr) E.g. 18:25', required=False)
 
     class Meta:
         model = AdminEvent
@@ -26,13 +26,12 @@ class AdminEventForm(forms.ModelForm):
         expires_time = self.cleaned_data['expires_time']
         expires_datetime = datetime.combine(expires_date, expires_time) if expires_date and expires_time else None
         context = {'text': self.cleaned_data['text']}
-        event = Event(
+        event = Event.objects.create(
             source=self.cleaned_data['source'],
             context=context,
             time_expires=expires_datetime,
             uuid=uuid1().hex
         )
-        event.save()
         return event
 
     def save_m2m(self, *args, **kwargs):

@@ -74,8 +74,9 @@ class Medium(models.Model):
         ]
 
     @transaction.atomic
-    def events_targets(self, entity_kind=None, start_time=None, end_time=None,
-                       seen=None, include_expired=False, mark_seen=False):
+    def events_targets(
+            self, entity_kind=None, start_time=None, end_time=None,
+            seen=None, include_expired=False, mark_seen=False):
         """Return all events for this medium, with who the event is for.
         """
         events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
