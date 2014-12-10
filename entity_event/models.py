@@ -348,6 +348,11 @@ class Event(models.Model):
         return s.format(source=source, time=time)
 
 
+class AdminEvent(Event):
+    class Meta:
+        proxy = True
+
+
 @python_2_unicode_compatible
 class EventActor(models.Model):
     event = models.ForeignKey('Event')
