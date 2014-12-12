@@ -24,7 +24,8 @@ class AdminEventForm(forms.ModelForm):
         self.clean()
         expires_date = self.cleaned_data['expires_date']
         expires_time = self.cleaned_data['expires_time']
-        expires_datetime = datetime.combine(expires_date, expires_time) if expires_date and expires_time else None
+        expires_datetime = (
+            datetime.combine(expires_date, expires_time) if expires_date and expires_time else datetime.max)
         context = {'text': self.cleaned_data['text']}
         event = Event.objects.create(
             source=self.cleaned_data['source'],
