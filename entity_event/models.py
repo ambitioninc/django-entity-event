@@ -32,18 +32,16 @@ class Medium(models.Model):
         events = self.get_filtered_events(**event_filters)
         subscriptions = Subscription.objects.filter(medium=self)
 
-        subscription_q_objects = []
-        for sub in subscriptions:
-            if sub.only_following:
-                entities = sub.subscribed_entities()
-                followed_by = self.followed_by(entities)
-                subscription_q_objects.append(
-                    Q(eventactor__entity__in=followed_by, source=sub.source)
-                )
-            else:
-                subscription_q_objects.append(
-                    Q(source=sub.source)
-                )
+        subscription_q_objects = [
+            Q(
+                eventactor__entity__in=self.followed_by(sub.subscribed_entities()),
+                source=sub.source
+            )
+            for sub in subscriptions if sub.only_following
+        ]
+        subscription_q_objects.append(
+            Q(source__in=[sub.source for sub in subscriptions if not sub.only_following]))
+
         events = events.filter(reduce(or_, subscription_q_objects))
         return events
 
@@ -56,17 +54,16 @@ class Medium(models.Model):
         subscriptions = Subscription.objects.filter(medium=self)
         subscriptions = self.subset_subscriptions(subscriptions, entity)
 
-        subscription_q_objects = []
-        for sub in subscriptions:
-            if sub.only_following:
-                followed_by = self.followed_by(entity)
-                subscription_q_objects.append(
-                    Q(eventactor__entity__in=followed_by, source=sub.source)
-                )
-            else:
-                subscription_q_objects.append(
-                    Q(source=sub.source)
-                )
+        subscription_q_objects = [
+            Q(
+                eventactor__entity__in=self.followed_by(entity),
+                source=sub.source
+            )
+            for sub in subscriptions if sub.only_following
+        ]
+        subscription_q_objects.append(
+            Q(source__in=[sub.source for sub in subscriptions if not sub.only_following])
+        )
 
         return [
             event for event in events.filter(reduce(or_, subscription_q_objects))
