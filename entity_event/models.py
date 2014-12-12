@@ -140,7 +140,7 @@ class Medium(models.Model):
         unsubscriptions = self.unsubscriptions
         return [t for t in targets if t.id not in unsubscriptions[source_id]]
 
-    def get_filtered_events_queries(self, start_time, end_time, seen, include_expired):
+    def get_filtered_events_queries(self, start_time, end_time, seen, include_expired, actor):
         """Return Q objects to filter events table.
         """
         now = datetime.utcnow()
@@ -159,9 +159,15 @@ class Medium(models.Model):
             filters.append(Q(eventseen__medium=self))
         elif seen is False:
             filters.append(~Q(eventseen__medium=self))
+
+        # Filter by actor
+        if actor is not None:
+            filters.append(Q(eventactor__entity=actor))
+
         return filters
 
-    def get_filtered_events(self, **event_filters):
+    def get_filtered_events(
+            self, start_time=None, end_time=None, seen=None, mark_seen=False, include_expired=False, actor=None):
         """
         Retrieves events with time or seen filters and also marks them as seen if necessary.
 
@@ -172,12 +178,11 @@ class Medium(models.Model):
           - seen: Filter by if it is seen or not seen. None indicates no seen filtering is done
           - mark_seen: Mark events as seen if they were not seen (and seen=False). Note that marking
               as seen evaluates the queryset and performs a bulk update
+          - actor: Filter events that have the provided actor
         """
-        filtered_events_queries = self.get_filtered_events_queries(
-            event_filters.get('start_time'), event_filters.get('end_time'), event_filters.get('seen'),
-            event_filters.get('include_expired'))
+        filtered_events_queries = self.get_filtered_events_queries(start_time, end_time, seen, include_expired, actor)
         events = Event.objects.filter(*filtered_events_queries)
-        if event_filters.get('seen') is False and event_filters.get('mark_seen'):
+        if seen is False and mark_seen:
             # Evaluate the event qset here and create a new queryset that is no longer filtered by
             # if the events are marked as seen. We do this because we want to mark the events
             # as seen in the next line of code. If we didn't evaluate the qset here first, it result
