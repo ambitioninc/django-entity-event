@@ -147,7 +147,7 @@ class Medium(models.Model):
         if end_time is not None:
             filters.append(Q(time__lte=end_time))
         if not include_expired:
-            filters.append(Q(Q(time_expires__gte=now) | Q(time_expires__isnull=True)))
+            filters.append(Q(time_expires__gte=now))
 
         # Check explicitly for True and False as opposed to None
         #   - `seen==False` gets unseen notifications
