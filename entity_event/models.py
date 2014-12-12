@@ -26,10 +26,10 @@ class Medium(models.Model):
         return self.display_name
 
     @transaction.atomic
-    def events(self, start_time=None, end_time=None, seen=None, include_expired=False, mark_seen=False):
+    def events(self, **event_filters):
         """Return subscribed events, with basic filters.
         """
-        events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
+        events = self.get_filtered_events(**event_filters)
         subscriptions = Subscription.objects.filter(medium=self)
 
         subscription_q_objects = []
@@ -48,10 +48,10 @@ class Medium(models.Model):
         return events
 
     @transaction.atomic
-    def entity_events(self, entity, start_time=None, end_time=None, seen=None, include_expired=False, mark_seen=False):
+    def entity_events(self, entity, **event_filters):
         """Return subscribed events for a given entity.
         """
-        events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
+        events = self.get_filtered_events(**event_filters)
 
         subscriptions = Subscription.objects.filter(medium=self)
         subscriptions = self.subset_subscriptions(subscriptions, entity)
@@ -74,12 +74,10 @@ class Medium(models.Model):
         ]
 
     @transaction.atomic
-    def events_targets(
-            self, entity_kind=None, start_time=None, end_time=None,
-            seen=None, include_expired=False, mark_seen=False):
+    def events_targets(self, entity_kind=None, **event_filters):
         """Return all events for this medium, with who the event is for.
         """
-        events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
+        events = self.get_filtered_events(**event_filters)
         subscriptions = Subscription.objects.filter(medium=self)
 
         event_pairs = []
@@ -142,7 +140,7 @@ class Medium(models.Model):
         unsubscriptions = self.unsubscriptions
         return [t for t in targets if t.id not in unsubscriptions[source_id]]
 
-    def get_event_filters(self, start_time, end_time, seen, include_expired):
+    def get_filtered_events_queries(self, start_time, end_time, seen, include_expired):
         """Return Q objects to filter events table.
         """
         now = datetime.utcnow()
@@ -163,13 +161,23 @@ class Medium(models.Model):
             filters.append(~Q(eventseen__medium=self))
         return filters
 
-    def get_filtered_events(self, start_time, end_time, seen, include_expired, mark_seen):
+    def get_filtered_events(self, **event_filters):
         """
         Retrieves events with time or seen filters and also marks them as seen if necessary.
+
+        Possible event filters are:
+          - start_time: Filter everything including and after this time
+          - end_time: Filter everything up to and including this time
+          - include_expired: Include expired events in the result
+          - seen: Filter by if it is seen or not seen. None indicates no seen filtering is done
+          - mark_seen: Mark events as seen if they were not seen (and seen=False). Note that marking
+              as seen evaluates the queryset and performs a bulk update
         """
-        event_filters = self.get_event_filters(start_time, end_time, seen, include_expired)
-        events = Event.objects.filter(*event_filters)
-        if seen is False and mark_seen:
+        filtered_events_queries = self.get_filtered_events_queries(
+            event_filters.get('start_time'), event_filters.get('end_time'), event_filters.get('seen'),
+            event_filters.get('include_expired'))
+        events = Event.objects.filter(*filtered_events_queries)
+        if event_filters.get('seen') is False and event_filters.get('mark_seen'):
             # Evaluate the event qset here and create a new queryset that is no longer filtered by
             # if the events are marked as seen. We do this because we want to mark the events
             # as seen in the next line of code. If we didn't evaluate the qset here first, it result

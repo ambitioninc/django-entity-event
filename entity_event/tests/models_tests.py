@@ -237,32 +237,32 @@ class MediumGetEventFiltersTest(TestCase):
         G(EventSeen, event=e1, medium=self.medium)
 
     def test_start_time(self):
-        filters = self.medium.get_event_filters(datetime(2014, 1, 16), None, None, True)
+        filters = self.medium.get_filtered_events_queries(datetime(2014, 1, 16), None, None, True)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 3)
 
     def test_end_time(self):
-        filters = self.medium.get_event_filters(None, datetime(2014, 1, 16), None, True)
+        filters = self.medium.get_filtered_events_queries(None, datetime(2014, 1, 16), None, True)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 2)
 
     def test_is_seen(self):
-        filters = self.medium.get_event_filters(None, None, True, True)
+        filters = self.medium.get_filtered_events_queries(None, None, True, True)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 1)
 
     def test_is_not_seen(self):
-        filters = self.medium.get_event_filters(None, None, False, True)
+        filters = self.medium.get_filtered_events_queries(None, None, False, True)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 4)
 
     def test_include_expires(self):
-        filters = self.medium.get_event_filters(None, None, None, True)
+        filters = self.medium.get_filtered_events_queries(None, None, None, True)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 5)
 
     def test_dont_include_expires(self):
-        filters = self.medium.get_event_filters(None, None, None, False)
+        filters = self.medium.get_filtered_events_queries(None, None, None, False)
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 4)
 
