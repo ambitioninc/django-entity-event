@@ -349,8 +349,8 @@ class EventManager(models.Manager):
 class Event(models.Model):
     source = models.ForeignKey('Source')
     context = jsonfield.JSONField()
-    time = models.DateTimeField(auto_now_add=True)
-    time_expires = models.DateTimeField(null=True, default=None)
+    time = models.DateTimeField(auto_now_add=True, db_index=True)
+    time_expires = models.DateTimeField(default=datetime.max, db_index=True)
     uuid = models.CharField(max_length=128, unique=True)
 
     objects = EventManager()
