@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
+from datetime import datetime as dt
 from south.utils import datetime_utils as datetime
 from south.db import db
 from south.v2 import DataMigration
@@ -10,12 +10,12 @@ class Migration(DataMigration):
     def forwards(self, orm):
         for event in orm.Event.objects.all():
             if event.time_expires is None:
-                event.time_expires = datetime.max
+                event.time_expires = dt.max
                 event.save()      
 
     def backwards(self, orm):
         for event in orm.Event.objects.all():
-            if event.time_expires == datetime.max:
+            if event.time_expires == dt.max:
                 event.time_expires = None
                 event.save()
 
