@@ -15,7 +15,6 @@ from six.moves import reduce
 from entity.models import Entity, EntityKind, EntityRelationship
 
 
-# TODO: add mark_seen function
 @python_2_unicode_compatible
 class Medium(models.Model):
     """A ``Medium`` is an object in the database that defines the method
