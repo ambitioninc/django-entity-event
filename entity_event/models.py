@@ -590,8 +590,33 @@ class EventManager(models.Manager):
         return self.get_queryset().mark_seen(medium)
 
     @transaction.atomic
-    def create_event(self, ignore_duplicates=False, actors=None, **kwargs):
+    def create_event(self, actors=None, ignore_duplicates=False, **kwargs):
         """Create events with actors.
+
+        This method can be used in place of ``Event.objects.create``
+        to create events, and the appropriate actors. It takes all the
+        same keywords as ``Event.objects.create`` for the event
+        creation, but additionally takes a list of actors, and can be
+        told to not attempt to create an event if a duplicate event
+        exists.
+
+        :type actors: (optional) List of entities or list of entity ids.
+        :param actors: An ``EventActor`` object will be created for
+            each entity in the list. This allows for subscriptions
+            which are only following certain entities to behave
+            appropriately.
+
+        :type ignore_duplicates: (optional) Boolean
+        :param ignore_duplicates: If ``True``, a check will be made to
+            ensure that an event with the give ``uuid`` does not exist
+            before attempting to create the event. Setting this to
+            ``True`` allows the creator of events to gracefully ensure
+            no duplicates are created.
+
+        :param kwargs: This method requires all the arguments for
+            creating an event to be present in keyword arguments. The
+            required arguments are ``source`` and ``context``, and
+            optionally ``time_expires`` and ``uuid``.
         """
         if ignore_duplicates and self.filter(uuid=kwargs.get('uuid', '')).exists():
             return None
