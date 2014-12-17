@@ -753,19 +753,19 @@ class Subscription(models.Model):
     entities of a given kind can be subscribed by subscribing their
     super-entity and providing the ``sub_entity_kind`` argument.
 
-    Subscriptions further are specified to be either an "only
-    following" subscription or not. This specification controls what
+    Subscriptions further are specified to be either an "only following"
+    subscription or not. This specification controls what
     events will be returned when ``Medium.entity_events`` is called,
     and controls what targets are returned when
     ``Medium.events_targets`` is called.
 
     For example, if events are created for a new photo being uploaded
-    (from a single source called, say "photos), and we want to provide
+    (from a single source called, say "photos"), and we want to provide
     individuals with a notification in their newsfeed (through a
     medium called "newsfeed"), we want to be able to display only the
     events where the individual is tagged in the photo. By setting
     ``only_following`` to true the following code would only return
-    events where the individual was included in the ``EventActor``s,
+    events where the individual was included in the ``EventActor`` s,
     rather than returning all "photos" events:
 
     .. code-block:: python
