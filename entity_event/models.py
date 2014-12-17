@@ -964,6 +964,15 @@ class AdminEvent(Event):
 
 @python_2_unicode_compatible
 class EventActor(models.Model):
+    """``EventActor`` objects encode what entities were involved in an
+    event. They provide the information necessary to create "only
+    following" subscriptions which route events only to the entities
+    that are involved in the event.
+
+    ``EventActor`` objects should not be created directly, but should
+    be created as part of the creation of ``Event`` objects, using
+    ``Event.objects.create_event``.
+    """
     event = models.ForeignKey('Event')
     entity = models.ForeignKey(Entity)
 
@@ -977,6 +986,16 @@ class EventActor(models.Model):
 
 @python_2_unicode_compatible
 class EventSeen(models.Model):
+    """``EventSeen`` objects store information about where and when an
+    event was seen. They store the medium that the event was seen on,
+    and what time it was seen. This information is used by the event
+    querying methods on ``Medium`` objects to filter events by whether
+    or not they have been seen on that medium.
+
+    ``EventSeen`` objects should not be created directly, but should
+    be created by using the ``EventQuerySet.mark_seen`` method,
+    available on the QuerySets returned by the event querying methods.
+    """
     event = models.ForeignKey('Event')
     medium = models.ForeignKey('Medium')
     time_seen = models.DateTimeField(default=datetime.utcnow)
