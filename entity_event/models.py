@@ -630,6 +630,25 @@ class Source(models.Model):
 
 @python_2_unicode_compatible
 class SourceGroup(models.Model):
+    """A ``SourceGroup`` object is a high level categorization of
+    events. Since ``Source`` objecst are meant to be very fine
+    grained, they are collected into ``SourceGroup`` objects. There is
+    no additional behavior associated with the source groups other
+    than further categorization. Source groups can be created with
+    ``SourceGroup.objects.create``, which takes the following
+    arguments:
+
+    :type name: str
+    :param name: A short, unique name for the source group.
+
+    :type display_name: str
+    :param display_name: A short, human readable name for the source
+        group. Does not need to be unique.
+
+    :type description: str
+    :param description: A human readable description of the source
+        group.
+    """
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
@@ -641,6 +660,35 @@ class SourceGroup(models.Model):
 
 @python_2_unicode_compatible
 class Unsubscription(models.Model):
+    """Because django-entity-event allows for whole groups to be
+    subscribed to events at once, unsubscribing an entity is not as
+    simple as removing their subscription object. Instead, the
+    Unsubscription table provides a simple way to ensure that an
+    entity does not see events if they don't want to.
+
+    Unsubscriptions are created for a single entity at a time, where
+    they are unsubscribed for events from a source on a medium. This
+    is stored as an ``Unsubscription`` object in the database, which
+    can be created using ``Unsubscription.objects.create`` using the
+    following arguments:
+
+    :type entity: Entity
+    :param entity: The entity to unsubscribe.
+
+    :type medium: Medium
+    :param medium: The ``Medium`` object representing where they don't
+        want to see the events.
+
+    :type source: Source
+    :param source: The ``Source`` object representing what category
+        of event they no longer want to see.
+
+    Once an ``Unsubscription`` object is created, all of the logic to
+    ensure that they do not see events form the given source by the
+    given medium is handled by the methods used to query for events
+    via the ``Medium`` object. That is, once the object is created, no
+    more work is needed to unsubscribe them.
+    """
     entity = models.ForeignKey(Entity)
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
