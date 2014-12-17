@@ -91,6 +91,8 @@ class Medium(models.Model):
             marks all the returned events as having been seen by this
             medium.
 
+        :rtype: EventQuerySet
+        :returns: A queryset of events.
         """
         events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
@@ -182,6 +184,8 @@ class Medium(models.Model):
             marks all the returned events as having been seen by this
             medium.
 
+        :rtype: EventQuerySet
+        :returns: A queryset of events.
         """
         events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
 
@@ -274,6 +278,9 @@ class Medium(models.Model):
             marks all the returned events as having been seen by this
             medium.
 
+        :rtype: List of tuples
+        :returns: A list of tuples in the form ``(event, targets)``
+            where ``targets`` is a list of entities.
         """
         events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
@@ -317,6 +324,16 @@ class Medium(models.Model):
         2. The subscription is for a super-entity of the given entity,
         and the subscriptions's sub-entity-kind is the same as that of
         the entity's.
+
+        :type subscriptions: QuerySet
+        :param subscriptions: A QuerySet of subscriptions to subset.
+
+        :type entity: (optional) Entity
+        :param entity: Subset subscriptions to only those relevant for
+            this entity.
+
+        :rtype: QuerySet
+        :returns: A queryset of filtered subscriptions.
         """
         if entity is None:
             return subscriptions
@@ -333,6 +350,11 @@ class Medium(models.Model):
     def unsubscriptions(self):
         """Returns the unsubscribed entity IDs for each source as a dict,
         keyed on source_id.
+
+        :rtype: Dictionary
+        :returns: A dictionary of the form ``{source_id: entities}``
+            where ``entities`` is a list of entities unsubscribed from
+            that source for this medium.
         """
         unsubscriptions = defaultdict(list)
         for unsub in Unsubscription.objects.filter(medium=self).values('entity', 'source'):
@@ -348,6 +370,15 @@ class Medium(models.Model):
 
     def get_event_filters(self, start_time, end_time, seen, include_expired):
         """Return Q objects to filter events table to relevant events.
+
+        The filters that are applied are those passed in from the
+        method that is querying the events table: One of ``events``,
+        ``entity_events`` or ``events_targets``. The arguments have
+        the behavior documented in those methods.
+
+        :rtype: List of Q objects
+        :returns: A list of Q objects, which can be used as arguments
+            to ``Event.objects.filter``.
         """
         now = datetime.utcnow()
         filters = []
@@ -370,6 +401,9 @@ class Medium(models.Model):
     def get_filtered_events(self, start_time, end_time, seen, include_expired, mark_seen):
         """Retrieves events, filters by event level filters, and marks them as
         seen if necessary.
+
+        :rtype: EventQuerySet
+        :returns: All events which match the given filters.
         """
         event_filters = self.get_event_filters(start_time, end_time, seen, include_expired)
         events = Event.objects.filter(*event_filters)
@@ -407,6 +441,9 @@ class Medium(models.Model):
 
         Return a queyset of the entities that the given entities are
         following. This needs to be the inverse of ``followers_of``.
+
+        :rtype: EntityQuerySet
+        :returns: A QuerySet of entities followed by those given.
         """
         if isinstance(entities, Entity):
             entities = Entity.objects.filter(id=entities.id)
@@ -442,6 +479,10 @@ class Medium(models.Model):
 
         Return a querset of the entities that follow the given
         entities. This needs to be the inverse of ``followed_by``.
+
+        :rtype: EntityQuerySet
+        :returns: A QuerySet of entities who are followers of those
+            given.
         """
         if isinstance(entities, Entity):
             entities = Entity.objects.filter(id=entities.id)
@@ -470,6 +511,14 @@ class Source(models.Model):
     def get_context(self, context):
         """Gets the context for this source by loading it through the source's
         context loader (if it has one).
+
+        :type context: Dict
+        :param context: A dictionary of context for an event from this
+            source.
+
+        :rtype: Dict
+        :returns: The context provided, with any additional context
+            loaded by the context loader function.
         """
         if self.context_loader:
             return self.get_context_loader_function()(context)
@@ -547,6 +596,10 @@ class Subscription(models.Model):
         This will be a single entity in the case of an individual
         subscription, otherwise it will be all the entities in the
         group subscription.
+
+        :rtype: EntityQuerySet
+        :returns: A QuerySet of all the entities that are a part of
+            this subscription.
         """
         if self.sub_entity_kind is not None:
             sub_entities = self.entity.sub_relationships.filter(
@@ -617,6 +670,11 @@ class EventManager(models.Manager):
             creating an event to be present in keyword arguments. The
             required arguments are ``source`` and ``context``, and
             optionally ``time_expires`` and ``uuid``.
+
+        :rtype: Event
+        :returns: The created event. Alternatively if a duplicate
+            event already exists and ``ignore_duplicates`` is
+            ``True``, it will return ``None``.
         """
         if ignore_duplicates and self.filter(uuid=kwargs.get('uuid', '')).exists():
             return None
@@ -650,6 +708,10 @@ class Event(models.Model):
         returned. If the source of the event provides a
         ``context_loader``, any additional context created by that
         function will be included.
+
+        :rtype: Dict
+        :returns: A dictionary of the event's context, with any
+            additional context loaded.
         """
         return self.source.get_context(self.context)
 
