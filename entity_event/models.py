@@ -68,7 +68,7 @@ class Medium(models.Model):
         This method of getting events is useful when you want to
         display events for your medium, independent of what entities
         were involved in those events. For example, this method can be
-        used to display a list of site-wide events that happend in the
+        used to display a list of site-wide events that happened in the
         past 24 hours:
 
         .. code-block:: python
@@ -97,12 +97,12 @@ class Medium(models.Model):
         of which are optional.
 
         :type start_time: datetime.datetime (optional)
-        :param start_time: Only return events that occured after the
+        :param start_time: Only return events that occurred after the
             given time. If no time is given for this argument, no
             filtering is done.
 
         :type end_time: datetime.datetime (optional)
-        :param end_time: Only return events that occured before the
+        :param end_time: Only return events that occurred before the
             given time. If no time is given for this argument, no
             filtering is done
 
@@ -188,12 +188,12 @@ class Medium(models.Model):
         :param entity: The entity to get events for.
 
         :type start_time: datetime.datetime (optional)
-        :param start_time: Only return events that occured after the
+        :param start_time: Only return events that occurred after the
             given time. If no time is given for this argument, no
             filtering is done.
 
         :type end_time: datetime.datetime (optional)
-        :param end_time: Only return events that occured before the
+        :param end_time: Only return events that occurred before the
             given time. If no time is given for this argument, no
             filtering is done
 
@@ -279,12 +279,12 @@ class Medium(models.Model):
             each targets list.
 
         :type start_time: datetime.datetime (optional)
-        :param start_time: Only return events that occured after the
+        :param start_time: Only return events that occurred after the
             given time. If no time is given for this argument, no
             filtering is done.
 
         :type end_time: datetime.datetime (optional)
-        :param end_time: Only return events that occured before the
+        :param end_time: Only return events that occurred before the
             given time. If no time is given for this argument, no
             filtering is done
 
@@ -352,7 +352,7 @@ class Medium(models.Model):
         sub-entity-kind. That is, it is not a group subscription.
 
         2. The subscription is for a super-entity of the given entity,
-        and the subscriptions's sub-entity-kind is the same as that of
+        and the subscription's sub-entity-kind is the same as that of
         the entity's.
 
         :type subscriptions: QuerySet
@@ -458,7 +458,7 @@ class Medium(models.Model):
         method.
 
         This method can be overridden by a class that concretely
-        inherits ``Medium``, to define custom sematics for the
+        inherits ``Medium``, to define custom semantics for the
         ``only_following`` flag on relevant ``Subscription``
         objects. Overriding this method, and ``followers_of`` will be
         sufficient to define that behavior. This method is not useful
@@ -475,7 +475,7 @@ class Medium(models.Model):
         opposite behavior, where an individual entity follows
         themselves and all of their sub-entities.
 
-        Return a queyset of the entities that the given entities are
+        Return a queryset of the entities that the given entities are
         following. This needs to be the inverse of ``followers_of``.
 
         :rtype: EntityQuerySet
@@ -494,7 +494,7 @@ class Medium(models.Model):
         method.
 
         This method can be overridden by a class that concretely
-        inherits ``Medium``, to define custom sematics for the
+        inherits ``Medium``, to define custom semantics for the
         ``only_following`` flag on relevant ``Subscription``
         objects. Overriding this method, and ``followed_by`` will be
         sufficient to define that behavior. This method is not useful
@@ -504,7 +504,7 @@ class Medium(models.Model):
         This implementation attempts to provide a sane default. In
         this implementation, the followers of the entities passed in
         are defined to be the entities themselves, and their
-        subentities.
+        sub-entities.
 
         That is, the followers of individual entities are themselves,
         and if the entity has sub-entities, those sub-entities. This
@@ -513,7 +513,7 @@ class Medium(models.Model):
         where an the followers of an individual entity are themselves
         and all of their super-entities.
 
-        Return a querset of the entities that follow the given
+        Return a queryset of the entities that follow the given
         entities. This needs to be the inverse of ``followed_by``.
 
         :rtype: EntityQuerySet
@@ -606,7 +606,7 @@ class Source(models.Model):
             return context
 
     def clean(self):
-        """Validatition for the model.
+        """Validation for the model.
 
         Check that:
         - the context loader provided maps to an actual loadable function.
@@ -631,7 +631,7 @@ class Source(models.Model):
 @python_2_unicode_compatible
 class SourceGroup(models.Model):
     """A ``SourceGroup`` object is a high level categorization of
-    events. Since ``Source`` objecst are meant to be very fine
+    events. Since ``Source`` objects are meant to be very fine
     grained, they are collected into ``SourceGroup`` objects. There is
     no additional behavior associated with the source groups other
     than further categorization. Source groups can be created with
@@ -733,7 +733,7 @@ class Subscription(models.Model):
     :type sub_entity_kind: (optional) EntityKind
     :param sub_entity_kind: When creating a group subscription, this
         is a foreign key to the ``EntityKind`` of the sub-entities to
-        subscribe. In the case of an individual subsciption, this should
+        subscribe. In the case of an individual subscription, this should
         be ``None``.
 
     :type only_following: Boolean
@@ -765,7 +765,7 @@ class Subscription(models.Model):
     medium called "newsfeed"), we want to be able to display only the
     events where the individual is tagged in the photo. By setting
     ``only_following`` to true the following code would only return
-    events where the individual was included in the ``EventActors``,
+    events where the individual was included in the ``EventActor``s,
     rather than returning all "photos" events:
 
     .. code-block:: python
@@ -907,9 +907,9 @@ class Event(models.Model):
     subscription. Events can be created with
     ``Event.objects.create_event``, documented above.
 
-    When creating an event, the information about what occured is
+    When creating an event, the information about what occurred is
     stored in a JSON blob in the ``context`` field. This context can
-    be any type of information that could be usefull for displaying
+    be any type of information that could be useful for displaying
     events on a given Medium. It is entirely the role of the
     application developer to ensure that there is agreement between
     what information is stored in ``Event.context`` and what
@@ -921,7 +921,7 @@ class Event(models.Model):
     To prevent storing unnecessary data in the context, this code can
     define a context loader function when creating this source, which
     can be used to dynamically fetch more data based on whatever
-    limitted amount of data makes sense to store in the context. This
+    limited amount of data makes sense to store in the context. This
     is further documented in the ``Source`` documentation.
     """
     source = models.ForeignKey('Source')
