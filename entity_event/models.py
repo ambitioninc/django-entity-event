@@ -815,6 +815,8 @@ class Subscription(models.Model):
 
 
 class EventQuerySet(QuerySet):
+    """A custom QuerySet for Events.
+    """
     def mark_seen(self, medium):
         """Creates EventSeen objects for the provided medium for every event
         in the queryset.
@@ -830,6 +832,8 @@ class EventQuerySet(QuerySet):
 
 
 class EventManager(models.Manager):
+    """A custom Manager for Events.
+    """
     def get_queryset(self):
         """Return the EventQuerySet.
         """
@@ -897,6 +901,29 @@ class EventManager(models.Manager):
 
 @python_2_unicode_compatible
 class Event(models.Model):
+    """``Event`` objects store information about events. By storing
+    events, from a given source, with some context, they are made
+    available to any ``Medium`` object with an appropriate
+    subscription. Events can be created with
+    ``Event.objects.create_event``, documented above.
+
+    When creating an event, the information about what occured is
+    stored in a JSON blob in the ``context`` field. This context can
+    be any type of information that could be usefull for displaying
+    events on a given Medium. It is entirely the role of the
+    application developer to ensure that there is agreement between
+    what information is stored in ``Event.context`` and what
+    information the code the processes and displays events on each
+    medium expects.
+
+    Events will usually be created by code that also created, or knows
+    about the ``Source`` object that is required to create the event.
+    To prevent storing unnecessary data in the context, this code can
+    define a context loader function when creating this source, which
+    can be used to dynamically fetch more data based on whatever
+    limitted amount of data makes sense to store in the context. This
+    is further documented in the ``Source`` documentation.
+    """
     source = models.ForeignKey('Source')
     context = jsonfield.JSONField()
     time = models.DateTimeField(auto_now_add=True)
@@ -928,6 +955,9 @@ class Event(models.Model):
 
 
 class AdminEvent(Event):
+    """A proxy model used to provide a separate interface for event
+    creation through the django-admin interface.
+    """
     class Meta:
         proxy = True
 
