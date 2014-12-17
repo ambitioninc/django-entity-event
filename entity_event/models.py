@@ -308,6 +308,15 @@ class Medium(models.Model):
 
     def subset_subscriptions(self, subscriptions, entity=None):
         """Return only subscriptions the given entity is a part of.
+
+        An entity is "part of a subscription" if either:
+
+        1. The subscription is for that entity, with no
+        sub-entity-kind. That is, it is not a group subscription.
+
+        2. The subscription is for a super-entity of the given entity,
+        and the subscriptions's sub-entity-kind is the same as that of
+        the entity's.
         """
         if entity is None:
             return subscriptions
@@ -322,8 +331,8 @@ class Medium(models.Model):
 
     @cached_property
     def unsubscriptions(self):
-        """
-        Returns the unsubscribed entity IDs for each source as a dict keyed on source_id.
+        """Returns the unsubscribed entity IDs for each source as a dict,
+        keyed on source_id.
         """
         unsubscriptions = defaultdict(list)
         for unsub in Unsubscription.objects.filter(medium=self).values('entity', 'source'):
@@ -331,15 +340,14 @@ class Medium(models.Model):
         return unsubscriptions
 
     def filter_source_targets_by_unsubscription(self, source_id, targets):
-        """
-        Given a source id and targets, filter the targets by unsubscriptions. Return
-        the filtered list of targets.
+        """Given a source id and targets, filter the targets by
+        unsubscriptions. Return the filtered list of targets.
         """
         unsubscriptions = self.unsubscriptions
         return [t for t in targets if t.id not in unsubscriptions[source_id]]
 
     def get_event_filters(self, start_time, end_time, seen, include_expired):
-        """Return Q objects to filter events table.
+        """Return Q objects to filter events table to relevant events.
         """
         now = datetime.utcnow()
         filters = []
@@ -360,8 +368,8 @@ class Medium(models.Model):
         return filters
 
     def get_filtered_events(self, start_time, end_time, seen, include_expired, mark_seen):
-        """
-        Retrieves events with time or seen filters and also marks them as seen if necessary.
+        """Retrieves events, filters by event level filters, and marks them as
+        seen if necessary.
         """
         event_filters = self.get_event_filters(start_time, end_time, seen, include_expired)
         events = Event.objects.filter(*event_filters)
@@ -413,15 +421,13 @@ class Source(models.Model):
     context_loader = models.CharField(max_length=256, default='', blank=True)
 
     def get_context_loader_function(self):
-        """
-        Returns an imported, callable context loader function.
+        """Returns an imported, callable context loader function.
         """
         return import_by_path(self.context_loader)
 
     def get_context(self, context):
-        """
-        Gets the context for this source by loading it through the source's context
-        loader (if it has one)
+        """Gets the context for this source by loading it through the source's
+        context loader (if it has one).
         """
         if self.context_loader:
             return self.get_context_loader_function()(context)
@@ -429,6 +435,11 @@ class Source(models.Model):
             return context
 
     def clean(self):
+        """Validatition for the model.
+
+        Check that:
+        - the context loader provided maps to an actual loadable function.
+        """
         if self.context_loader:
             try:
                 self.get_context_loader_function()
@@ -436,6 +447,8 @@ class Source(models.Model):
                 raise ValidationError('Must provide a loadable context loader')
 
     def save(self, *args, **kwargs):
+        """Save the instance to the database after validation.
+        """
         self.clean()
         return super(Source, self).save(*args, **kwargs)
 
@@ -488,6 +501,10 @@ class Subscription(models.Model):
 
     def subscribed_entities(self):
         """Return a queryset of all subscribed entities.
+
+        This will be a single entity in the case of an individual
+        subscription, otherwise it will be all the entities in the
+        group subscription.
         """
         if self.sub_entity_kind is not None:
             sub_entities = self.entity.sub_relationships.filter(
@@ -500,8 +517,13 @@ class Subscription(models.Model):
 
 class EventQuerySet(QuerySet):
     def mark_seen(self, medium):
-        """
-        Creates EventSeen objects for the provided medium for every event in the queryset.
+        """Creates EventSeen objects for the provided medium for every event
+        in the queryset.
+
+        Creating these EventSeen objects ensures they will not be
+        returned when passing ``seen=False`` to any of the medium
+        event retrieval functions, ``events``, ``entity_events``, or
+        ``events_targets``.
         """
         EventSeen.objects.bulk_create([
             EventSeen(event=event, medium=medium) for event in self
@@ -510,15 +532,24 @@ class EventQuerySet(QuerySet):
 
 class EventManager(models.Manager):
     def get_queryset(self):
+        """Return the EventQuerySet.
+        """
         return EventQuerySet(self.model)
 
     def mark_seen(self, medium):
+        """Creates EventSeen objects for the provided medium for every event
+        in the queryset.
+
+        Creating these EventSeen objects ensures they will not be
+        returned when passing ``seen=False`` to any of the medium
+        event retrieval functions, ``events``, ``entity_events``, or
+        ``events_targets``.
+        """
         return self.get_queryset().mark_seen(medium)
 
     @transaction.atomic
     def create_event(self, ignore_duplicates=False, actors=None, **kwargs):
-        """
-        A utility method for creating events with actors.
+        """Create events with actors.
         """
         if ignore_duplicates and self.filter(uuid=kwargs.get('uuid', '')).exists():
             return None
@@ -546,9 +577,12 @@ class Event(models.Model):
     objects = EventManager()
 
     def get_context(self):
-        """
-        Retrieves the context for this event, passing it through the context loader of
-        the source if necessary.
+        """Retrieves and populates the context for this event.
+
+        At the minimum, whatever context was stored in the event is
+        returned. If the source of the event provides a
+        ``context_loader``, any additional context created by that
+        function will be included.
         """
         return self.source.get_context(self.context)
 
