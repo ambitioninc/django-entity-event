@@ -23,11 +23,74 @@ class Medium(models.Model):
     description = models.TextField()
 
     def __str__(self):
+        """Readable representation of ``Medium`` objects."""
         return self.display_name
 
     @transaction.atomic
     def events(self, start_time=None, end_time=None, seen=None, include_expired=False, mark_seen=False):
         """Return subscribed events, with basic filters.
+
+        This method of getting events is useful when you want to
+        display events for your medium, independent of what entities
+        were involved in those events. For example, this method can be
+        used to display a list of site-wide events that happend in the
+        past 24 hours:
+
+        .. code-block:: python
+
+            TEMPLATE = '''
+                <html><body>
+                <h1> Yoursite's Events </h1>
+                <ul>
+                {% for event in events %}
+                    <li> {{ event.context.event_text }} </li>
+                {% endfor %}
+                </ul>
+                </body></html>
+            '''
+
+            def site_feed(request):
+                site_feed_medium = Medium.objects.get(name='site_feed')
+                start_time = datetime.utcnow() - timedelta(days=1)
+                context = {}
+                context['events'] = site_feed_medium.events(start_time=start_time)
+                return HttpResponse(TEMPLATE.render(context))
+
+        While the `events` method does not filter events based on what
+        entities are involved, filtering based on the properties of the events
+        themselves is supported, through the following arguments, all
+        of which are optional.
+
+        :type start_time: datetime.datetime (optional)
+        :param start_time: Only return events that occured after the
+            given time. If no time is given for this argument, no
+            filtering is done.
+
+        :type end_time: datetime.datetime (optional)
+        :param end_time: Only return events that occured before the
+            given time. If no time is given for this argument, no
+            filtering is done
+
+        :type seen: Boolean (optional)
+        :param seen: This flag controls whether events that have
+            marked as seen are included. By default, both events that
+            have and have not been marked as seen are included. If
+            ``True`` is given for this parameter, only events that
+            have been marked as seen will be included. If ``False`` is
+            given, only events that have not been marked as seen will
+            be included.
+
+        :type include_expired: Boolean (optional)
+        :param include_expired: By default, events that have a
+            expiration time, which has passed, are not included in the
+            results. Passing in ``True`` to this argument causes
+            expired events to be returned as well.
+
+        :type mark_seen: Boolean (optional)
+        :param mark_seen: Create a side effect in the database that
+            marks all the returned events as having been seen by this
+            medium.
+
         """
         events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
@@ -50,6 +113,75 @@ class Medium(models.Model):
     @transaction.atomic
     def entity_events(self, entity, start_time=None, end_time=None, seen=None, include_expired=False, mark_seen=False):
         """Return subscribed events for a given entity.
+
+        This method of getting events is useful when you want to see
+        only the events relevant to a single entity. The events
+        returned are events that the given entity is subscribed to,
+        either directly as an individual entity, or because they are
+        part of a group subscription. As an example, the
+        `entity_events` method can be used to implement a newsfeed for
+        a individual entity:
+
+        .. code-block:: python
+
+            TEMPLATE = '''
+                <html><body>
+                <h1> {entity}'s Events </h1>
+                <ul>
+                {% for event in events %}
+                    <li> {{ event.context.event_text }} </li>
+                {% endfor %}
+                </ul>
+                </body></html>
+            '''
+
+            def newsfeed(request):
+                newsfeed_medium = Medium.objects.get(name='newsfeed')
+                entity = Entity.get_for_obj(request.user)
+                context = {}
+                context['entity'] = entity
+                context['events'] = site_feed_medium.entity_events(entity, seen=False, mark_seen=True)
+                return HttpResponse(TEMPLATE.render(context))
+
+
+        The only required argument for this method is the entity to
+        get events for. Filtering based on the properties of the
+        events themselves is supported, through the rest of the
+        following arguments, which are optional.
+
+        :type_entity: Entity
+        :param entity: The entity to get events for.
+
+        :type start_time: datetime.datetime (optional)
+        :param start_time: Only return events that occured after the
+            given time. If no time is given for this argument, no
+            filtering is done.
+
+        :type end_time: datetime.datetime (optional)
+        :param end_time: Only return events that occured before the
+            given time. If no time is given for this argument, no
+            filtering is done
+
+        :type seen: Boolean (optional)
+        :param seen: This flag controls whether events that have
+            marked as seen are included. By default, both events that
+            have and have not been marked as seen are included. If
+            ``True`` is given for this parameter, only events that
+            have been marked as seen will be included. If ``False`` is
+            given, only events that have not been marked as seen will
+            be included.
+
+        :type include_expired: Boolean (optional)
+        :param include_expired: By default, events that have a
+            expiration time, which has passed, are not included in the
+            results. Passing in ``True`` to this argument causes
+            expired events to be returned as well.
+
+        :type mark_seen: Boolean (optional)
+        :param mark_seen: Create a side effect in the database that
+            marks all the returned events as having been seen by this
+            medium.
+
         """
         events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
 
@@ -77,7 +209,71 @@ class Medium(models.Model):
     def events_targets(
             self, entity_kind=None, start_time=None, end_time=None,
             seen=None, include_expired=False, mark_seen=False):
-        """Return all events for this medium, with who the event is for.
+        """Return all events for this medium, with who each event is for.
+
+        This method is useful for individually notifying every
+        entity concerned with a collection of events, while
+        still respecting subscriptions and usubscriptions. For
+        example, ``events_targets`` can be used to send email
+        notifications, by retrieving all unseen events (and marking
+        them as now having been seen), and then processing the
+        emails. In code, this could look like:
+
+        .. code-block:: python
+
+            email = Medium.objects.get(name='email')
+            new_emails = email.events_targets(seen=False, mark_seen=True)
+
+            for event, targets in new_emails:
+                django.core.mail.send_mail(
+                    subject = event.context["subject"]
+                    message = event.context["message"]
+                    recipient_list = [t.entity_meta["email"] for t in targets]
+                )
+
+        This ``events_targets`` method attempts to make bulk
+        processing of push-style notifications straightforward. This
+        sort of processing should normally occur in a separate thread
+        from any request/response cycle.
+
+        Filtering based on the properties of the events themselves is
+        supported, through the rest of the following arguments, which
+        are optional.
+
+        :type entity_kind: EntityKind
+        :param entity_kind: Only include targets of the given kind in
+            each targets list.
+
+        :type start_time: datetime.datetime (optional)
+        :param start_time: Only return events that occured after the
+            given time. If no time is given for this argument, no
+            filtering is done.
+
+        :type end_time: datetime.datetime (optional)
+        :param end_time: Only return events that occured before the
+            given time. If no time is given for this argument, no
+            filtering is done
+
+        :type seen: Boolean (optional)
+        :param seen: This flag controls whether events that have
+            marked as seen are included. By default, both events that
+            have and have not been marked as seen are included. If
+            ``True`` is given for this parameter, only events that
+            have been marked as seen will be included. If ``False`` is
+            given, only events that have not been marked as seen will
+            be included.
+
+        :type include_expired: Boolean (optional)
+        :param include_expired: By default, events that have a
+            expiration time, which has passed, are not included in the
+            results. Passing in ``True`` to this argument causes
+            expired events to be returned as well.
+
+        :type mark_seen: Boolean (optional)
+        :param mark_seen: Create a side effect in the database that
+            marks all the returned events as having been seen by this
+            medium.
+
         """
         events = self.get_filtered_events(start_time, end_time, seen, include_expired, mark_seen)
         subscriptions = Subscription.objects.filter(medium=self)
@@ -244,6 +440,7 @@ class Source(models.Model):
         return super(Source, self).save(*args, **kwargs)
 
     def __str__(self):
+        """Readable representation of ``Source`` objects."""
         return self.display_name
 
 
@@ -254,6 +451,7 @@ class SourceGroup(models.Model):
     description = models.TextField()
 
     def __str__(self):
+        """Readable representation of ``SourceGroup`` objects."""
         return self.display_name
 
 
@@ -264,6 +462,7 @@ class Unsubscription(models.Model):
     source = models.ForeignKey('Source')
 
     def __str__(self):
+        """Readable representation of ``Unsubscription`` objects."""
         s = '{entity} from {source} by {medium}'
         entity = self.entity.__str__()
         source = self.source.__str__()
@@ -280,6 +479,7 @@ class Subscription(models.Model):
     only_following = models.BooleanField(default=True)
 
     def __str__(self):
+        """Readable representation of ``Subscription`` objects."""
         s = '{entity} to {source} by {medium}'
         entity = self.entity.__str__()
         source = self.source.__str__()
@@ -353,6 +553,7 @@ class Event(models.Model):
         return self.source.get_context(self.context)
 
     def __str__(self):
+        """Readable representation of ``Event`` objects."""
         s = '{source} event at {time}'
         source = self.source.__str__()
         time = self.time.strftime('%Y-%m-%d::%H:%M:%S')
@@ -370,6 +571,7 @@ class EventActor(models.Model):
     entity = models.ForeignKey(Entity)
 
     def __str__(self):
+        """Readable representation of ``EventActor`` objects."""
         s = 'Event {eventid} - {entity}'
         eventid = self.event.id
         entity = self.entity.__str__()
@@ -386,6 +588,7 @@ class EventSeen(models.Model):
         unique_together = ('event', 'medium')
 
     def __str__(self):
+        """Readable representation of ``EventSeen`` objects."""
         s = 'Seen on {medium} at {time}'
         medium = self.medium.__str__()
         time = self.time_seen.strftime('%Y-%m-%d::%H:%M:%S')
