@@ -704,6 +704,82 @@ class Unsubscription(models.Model):
 
 @python_2_unicode_compatible
 class Subscription(models.Model):
+    """Which types of events are available to which mediums is controlled
+    through ``Subscription`` objects. By creating a ``Subscription``
+    object in the database, you are storing that events from a given
+    ``Source`` object should be available to a given ``Medium``
+    object.
+
+    Each ``Subscription`` object can be one of two levels, either an
+    individual subscription or a group subscription. Additionally,
+    each ``Subscription`` object can be one of two types of
+    subscription, either a global subscription, or an "only following"
+    subscription. ``Subscription`` objects are created using
+    ``Subscription.objects.create`` which takes the following
+    arguments:
+
+    :type medium: Medium
+    :param medium: The ``Medium`` object to make events available to.
+
+    :type source: Source
+    :param source: The ``Source`` object that represents the category
+        of events to make available.
+
+    :type entity: Entity
+    :param entity: The entity to subscribe in the case of an
+        individual subscription, or in the case of a group
+        subscription, the super-entity of the group.
+
+    :type sub_entity_kind: (optional) EntityKind
+    :param sub_entity_kind: When creating a group subscription, this
+        is a foreign key to the ``EntityKind`` of the sub-entities to
+        subscribe. In the case of an individual subsciption, this should
+        be ``None``.
+
+    :type only_following: Boolean
+    :param only_following: If ``True``, events will be available to
+        entities through the medium only if the entities are following
+        the actors of the event. If ``False``, the events will all
+        be available to all the entities through the medium.
+
+    When a ``Medium`` object is used to query for events, only the
+    events that have a subscription for their source to that medium
+    will ever be returned. This is an extremely useful property that
+    allows complex subscription logic to be handled simply by storing
+    subscription objects in the database.
+
+    Storing subscriptions is made simpler by the ability to subscribe
+    groups of entities with a single subscription object.  Groups of
+    entities of a given kind can be subscribed by subscribing their
+    super-entity and providing the ``sub_entity_kind`` argument.
+
+    Subscriptions further are specified to be either an "only
+    following" subscription or not. This specification controls what
+    events will be returned when ``Medium.entity_events`` is called,
+    and controls what targets are returned when
+    ``Medium.events_targets`` is called.
+
+    For example, if events are created for a new photo being uploaded
+    (from a single source called, say "photos), and we want to provide
+    individuals with a notification in their newsfeed (through a
+    medium called "newsfeed"), we want to be able to display only the
+    events where the individual is tagged in the photo. By setting
+    ``only_following`` to true the following code would only return
+    events where the individual was included in the ``EventActors``,
+    rather than returning all "photos" events:
+
+    .. code-block:: python
+
+        user_entity = Entity.objects.get_for_obj(user)
+        newsfeed_medium = Medium.objects.get(name='newsfeed')
+        newsfeed.entity_events(user)
+
+    The behavior of what constitutes "following" is controlled by the
+    Medium class. A default implementation of following is provided
+    and documented in the ``Medium.followers_of`` and
+    ``Medium.followed_by`` methods, but could be extended by
+    subclasses of Medium.
+    """
     medium = models.ForeignKey('Medium')
     source = models.ForeignKey('Source')
     entity = models.ForeignKey(Entity, related_name='+')
