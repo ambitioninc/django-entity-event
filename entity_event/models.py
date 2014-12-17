@@ -384,9 +384,29 @@ class Medium(models.Model):
         return events
 
     def followed_by(self, entities):
-        """Return a queyset of the entities that the given entities are following.
+        """Define what entities are followed by the entities passed to this
+        method.
 
-        Entities follow themselves, and their super entities.
+        This method can be overridden by a class that concretely
+        inherits ``Medium``, to define custom sematics for the
+        ``only_following`` flag on relevant ``Subscription``
+        objects. Overriding this method, and ``followers_of`` will be
+        sufficient to define that behavior. This method is not useful
+        to call directly, but is used by the methods that filter
+        events and targets.
+
+        This implementation attempts to provide a sane default. In
+        this implementation, the entities followed by the ``entities``
+        argument are the entities themselves, and their super entities.
+
+        That is, individual entities follow themselves, and the groups
+        they are a part of. This works as a default implementation,
+        but, for example, an alternate medium may wish to define the
+        opposite behavior, where an individual entity follows
+        themselves and all of their sub-entities.
+
+        Return a queyset of the entities that the given entities are
+        following. This needs to be the inverse of ``followers_of``.
         """
         if isinstance(entities, Entity):
             entities = Entity.objects.filter(id=entities.id)
@@ -397,9 +417,31 @@ class Medium(models.Model):
         return followed_by
 
     def followers_of(self, entities):
-        """Return a querset of the entities that follow the given entities.
+        """Define what entities are followers of the entities passed to this
+        method.
 
-        The followers of an entity are themselves and their sub entities.
+        This method can be overridden by a class that concretely
+        inherits ``Medium``, to define custom sematics for the
+        ``only_following`` flag on relevant ``Subscription``
+        objects. Overriding this method, and ``followed_by`` will be
+        sufficient to define that behavior. This method is not useful
+        to call directly, but is used by the methods that filter
+        events and targets.
+
+        This implementation attempts to provide a sane default. In
+        this implementation, the followers of the entities passed in
+        are defined to be the entities themselves, and their
+        subentities.
+
+        That is, the followers of individual entities are themselves,
+        and if the entity has sub-entities, those sub-entities. This
+        works as a default implementation, but, for example, an
+        alternate medium may wish to define the opposite behavior,
+        where an the followers of an individual entity are themselves
+        and all of their super-entities.
+
+        Return a querset of the entities that follow the given
+        entities. This needs to be the inverse of ``followed_by``.
         """
         if isinstance(entities, Entity):
             entities = Entity.objects.filter(id=entities.id)
