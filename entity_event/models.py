@@ -18,6 +18,42 @@ from entity.models import Entity, EntityKind, EntityRelationship
 # TODO: add mark_seen function
 @python_2_unicode_compatible
 class Medium(models.Model):
+    """A ``Medium`` is an object in the database that defines the method
+    by which users will view events. The actual objects in the
+    database are fairly simple, only requiring a ``name``,
+    ``display_name`` and ``description``. Mediums can be created with
+    ``Medium.objects.create``, using the following parameters:
+
+    :type name: str
+    :param name: A short, unique name for the medium.
+
+    :type display_name: str
+    :param display_name: A short, human readable name for the medium.
+        Does not need to be unique.
+
+    :type description: str
+    :param description: A human readable description of the
+        medium.
+
+    Encoding a ``Medium`` object in the database server two
+    purposes. First, it is referenced when subscriptions are
+    created. Second the ``Medium`` objects provide an entry point to
+    query for events and have all the subscription logic and filtering
+    taken care of for you.
+
+    Any time a new way to display events to a user is created, a
+    corresponding ``Medium`` should be created. Some examples could
+    include a medium for sending email notifications, a medium for
+    individual newsfeeds, or a medium for a site wide notification
+    center.
+
+    Once a medium object is created, and corresponding subscriptions
+    are created, there are three methods on the medium object that can
+    be used to query for events. They are ``events``,
+    ``entity_events`` and ``events_targets``. The differences between
+    these methods are described in their corresponding documentation.
+
+    """
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
@@ -495,6 +531,50 @@ class Medium(models.Model):
 
 @python_2_unicode_compatible
 class Source(models.Model):
+    """A ``Source`` is an object in the database that represents where
+    events come from. These objects only require a few fields,
+    ``name``, ``display_name`` ``description``, ``group`` and
+    optionally ``context_loader``. Source objects categorize events
+    based on where they came from, or what type of information they
+    contain. Each source should be fairly fine grained, with broader
+    categorizations possible through ``SourceGroup`` objects. Sources
+    can be created with ``Source.objects.create`` using the following
+    parameters:
+
+    :type name: str
+    :param name: A short, unique name for the source.
+
+    :type display_name: str
+    :param display_name: A short, human readable name for the source.
+        Does not need to be unique.
+
+    :type description: str
+    :param description: A human readable description of the source.
+
+    :type group: SourceGroup
+    :param group: A SourceGroup object. A broad grouping of where the
+        events originate.
+
+    :type context_loader: (optional) str
+    :param context_loader: A importable path to a function, which can
+        take a dictionary of context, and populate it with more
+        information from the database or other sources.
+
+    Storing source objects in the database servers two purposes. The
+    first is to provide an object that Subscriptions can reference,
+    allowing different categories of events to be subscribed to over
+    different mediums. The second is to allow source instances to
+    store a reference to a function which can populate event contexts
+    with additional information that is relevant to the source. This
+    allows ``Event`` objects to be created with minimal data
+    duplication.
+
+    Once sources are created, they will primarily be used to
+    categorize events, as each ``Event`` object requires a reference
+    to a source. Additionally they will be referenced by
+    ``Subscription`` objects to route events of the given source to be
+    handled by a given medium.
+    """
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
