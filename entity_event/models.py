@@ -121,6 +121,10 @@ class Medium(models.Model):
             results. Passing in ``True`` to this argument causes
             expired events to be returned as well.
 
+        :type actor: Entity (optional)
+        :param actor: Only include events with the given entity as an
+            actor.
+
         :type mark_seen: Boolean (optional)
         :param mark_seen: Create a side effect in the database that
             marks all the returned events as having been seen by this
@@ -212,6 +216,10 @@ class Medium(models.Model):
             results. Passing in ``True`` to this argument causes
             expired events to be returned as well.
 
+        :type actor: Entity (optional)
+        :param actor: Only include events with the given entity as an
+            actor.
+
         :type mark_seen: Boolean (optional)
         :param mark_seen: Create a side effect in the database that
             marks all the returned events as having been seen by this
@@ -302,6 +310,10 @@ class Medium(models.Model):
             expiration time, which has passed, are not included in the
             results. Passing in ``True`` to this argument causes
             expired events to be returned as well.
+
+        :type actor: Entity (optional)
+        :param actor: Only include events with the given entity as an
+            actor.
 
         :type mark_seen: Boolean (optional)
         :param mark_seen: Create a side effect in the database that
