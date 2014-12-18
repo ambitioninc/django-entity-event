@@ -6,7 +6,7 @@ care about into a unified location. The parts of your code base that
 create these events are probably totally separate from the parts that
 display them, which are also separate from the parts that manage
 subscriptions to notifications. Django Entity Event makes separating
-these concers as simple as possible, and provides convenient
+these concerns as simple as possible, and provides convenient
 abstractions at each of these levels.
 
 This quickstart guide handles the three parts of managing events and
@@ -140,10 +140,10 @@ At first, none of the events we have been creating are accessible by
 either of these mediums. In order for the mediums to have access to
 the events, an appropriate ``Subscription`` object needs to be
 created. Creating a ``Subscription`` object encodes that an entity, or
-group of entities, wants to recieve notifications of events from a
+group of entities, wants to receive notifications of events from a
 given source, by a given medium. For example, we can create a
 subscription so that all the sub-entities of an ``all_users`` entity
-will recieve notifications of new products in their newsfeed
+will receive notifications of new products in their newsfeed
 
 .. code-block:: python
 
@@ -165,7 +165,7 @@ If we wanted to create a subscription for users to get email
 notifications when they've been tagged in a photo, we will also create
 a ``Subscription`` object. However, unlike the new product events, not
 every event from the photos source is relevant to every user. We want
-to limit the events they recieve emails about to the events where they
+to limit the events they receive emails about to the events where they
 are tagged in the photo.
 
 In code above, you may notice the ``only_following=False``
@@ -173,7 +173,7 @@ argument. This argument controls whether all events are relevant for
 the subscription, or if the events are only relevant if they are
 related to the entities being subscribed. Since new products are
 relevant to all users, we set this to ``False``. To create a
-subscription for users to recieve emails about photos they're tagged
+subscription for users to receive emails about photos they're tagged
 in, we'll define the subscription as follows
 
 .. code-block:: python
@@ -192,9 +192,9 @@ entities.
 
 Creating subscriptions for a whole group of people with a single entry
 into the database is very powerful. However, some users may wish to
-opt out of certain types of notifications. To accomodate this, we can
+opt out of certain types of notifications. To accommodate this, we can
 create an ``Unsubscription`` object. These are used to unsubscribe a
-single entity from recieving notifications of a given source on a
+single entity from receiving notifications of a given source on a
 given medium. For example if a user wants to opt out of new product
 notifications in their newsfeed, we can create an ``Unsubscription``
 object for them
@@ -211,7 +211,7 @@ object for them
     )
 
 Once this object is stored in the database, this user will no longer
-recieve this type of notification.
+receive this type of notification.
 
 Once we have ``Medium`` objects set up for the methods of sending
 notifications, and we have our entities subscribed to sources of
@@ -263,7 +263,7 @@ and returns all the events for that entity on that medium. We could
 use this method to get events for an individual entity's newsfeed. If
 we have a large number of sources creating events, with subscriptions
 between those sources and the newsfeed, aggregating them into one
-querset of events is as simple as
+QuerySet of events is as simple as
 
 .. code-block:: python
 
@@ -275,7 +275,7 @@ want to process batches of events, and need information about who to
 send the events to. For this use case, the ``Medium.events_targets``
 method can be used. Instead of providing a ``EventQueryset``, it
 provides a list of tuples in the form ``(event, targets)``, where
-``targets`` is a list of the entities that should recieve that
+``targets`` is a list of the entities that should receive that
 notification. We could use this function to send emails about events
 as follows
 
@@ -297,9 +297,9 @@ arguments for filtering the events based on properties of the events
 themselves. All three methods support the following arguments:
 
 - ``start_time``: providing a datetime object to this parameter will
-  filter the events to only those that occured after this time
-- ``end_time``: providing a datetime object to this paramter will
-  filter the events to only those that occured before this time.
+  filter the events to only those that occurred after this time
+- ``end_time``: providing a datetime object to this parameter will
+  filter the events to only those that occurred before this time.
 - ``seen``: passing ``False`` to this argument will filter the events
   to only those which have not been marked as having been seen.
 - ``include_expired``: defaults to ``False``, passing ``True`` to this
