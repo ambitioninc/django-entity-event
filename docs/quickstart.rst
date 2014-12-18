@@ -219,5 +219,98 @@ events on those mediums, we can use the ``Medium`` objects to query
 for events, which we can then display to our users.
 
 
-Querying and Events
--------------------
+Querying Events
+---------------
+
+Once we've got events being created, and subscriptions to them for a
+given medium, we'll want to display those events to our users. When
+there are a large variety of events coming into the system from many
+different sources, it would be very difficult to query the ``Event``
+model directly while still respecting all the ``Subscription`` logic
+that we hope to maintain.
+
+For this reason, Django Entity Event provides three methods to make
+querying for ``Events`` to display extremely simple. Since the
+``Medium`` objects you've created should correspond directly to a
+means by which you want to display events to users, there are three
+methods of the ``Medium`` class to perform queries.
+
+1. ``Medium.events``
+2. ``Medium.entity_events``
+3. ``Medium.events_targets``
+
+Each of these methods return somewhat different views into the events
+that are being stored in the system. In each case, though, you will
+call these methods from an instance of ``Medium``, and the events
+returned will only be events for which there is a corresponding
+``Subscription`` object.
+
+The ``Medium.events`` method can be used to return all the events for
+that medium. This method is useful for mediums that want to display
+events without any particular regard for who performed the events. For
+example, we could have a medium that aggregated all of the events from
+the new products source. If we had a medium, ``all_products_medium``,
+with the appropriate subscriptions set up, getting all the new product
+events is as simple as
+
+.. code-block:: python
+
+    all_products_medium.events()
+
+The ``Medium.entity_events`` method can be used to get all the events for a
+given entity on that medium. It takes a single entity as an argument,
+and returns all the events for that entity on that medium. We could
+use this method to get events for an individual entity's newsfeed. If
+we have a large number of sources creating events, with subscriptions
+between those sources and the newsfeed, aggregating them into one
+querset of events is as simple as
+
+.. code-block:: python
+
+   newsfeed_medium.entity_events(user_entity)
+
+There are some mediums that notify users of events independent of a
+pageview's request/response cycle. For example, an email medium will
+want to process batches of events, and need information about who to
+send the events to. For this use case, the ``Medium.events_targets``
+method can be used. Instead of providing a ``EventQueryset``, it
+provides a list of tuples in the form ``(event, targets)``, where
+``targets`` is a list of the entities that should recieve that
+notification. We could use this function to send emails about events
+as follows
+
+.. code-block:: python
+
+    from django.core.mail import send_mail
+
+    new_emails = email_medium.events_targets(seen=False, mark_seen=True)
+
+    for event, targets in new_emails:
+        send_mail(
+            subject = event.context["subject"]
+            message = event.context["message"]
+            recipient_list = [t.entity_meta["email"] for t in targets]
+        )
+
+As seen in the last example, these methods also support a number of
+arguments for filtering the events based on properties of the events
+themselves. All three methods support the following arguments:
+
+- ``start_time``: providing a datetime object to this parameter will
+  filter the events to only those that occured after this time
+- ``end_time``: providing a datetime object to this paramter will
+  filter the events to only those that occured before this time.
+- ``seen``: passing ``False`` to this argument will filter the events
+  to only those which have not been marked as having been seen.
+- ``include_expired``: defaults to ``False``, passing ``True`` to this
+  argument will include events that are expired.
+- ``actor``: providing an entity to this parameter will filter the
+  events to only those that include the given entity as an actor.
+
+Finally, all of these methods take an argument ``mark_seen``. Passing
+``True`` to this argument will mark the events as having been seen by
+that medium so they will not show up if ``False`` is passed to the
+``seen`` filtering argument.
+
+Using these three methods with any combination of the event filters
+should make virtually any event querying task simple.
