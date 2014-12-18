@@ -1,7 +1,7 @@
 Advanced Features
 =================
 
-The Quickstart guide covers the common use cases of Django Entity
+The :ref:`quickstart` guide covers the common use cases of Django Entity
 Event. In addition to the basic uses for creating, storing, and
 querying events, there are some more advanced uses supported for
 making Django Entity Event more efficient and flexible.
@@ -10,7 +10,7 @@ This guide will cover the following advanced use cases:
 
 - Dynamically loading context using ``context_loader``
 - Customizing the behavior of ``only_following`` by sub-classing
-  ``Medium``.
+  :py:class:`~entity_event.models.Medium`.
 
 
 Custom Context Loaders
@@ -65,7 +65,8 @@ a path to this function in the ``context_loader`` field.
     )
 
 With this setup, all of the additional information can by dynamically
-loaded into events, simply by calling ``Event.get_context``.
+loaded into events, simply by calling :py:meth:`Event.get_context
+<entity_event.models.Event.get_context>`.
 
 The ``Source`` model also uses django's ``clean`` method to ensure
 that only valid importable functions get saved in the
@@ -89,16 +90,21 @@ In the quickstart, we discussed the use of "only following"
 subscriptions to ensure that users only see the events that they are
 interested in. In this discussion, we mentioned that by default,
 entities follow themselves, and their super entities. This following
-relationship is defined in two methods on the ``Medium`` model:
-``Medium.followers_of`` and ``Medium.followed_by``. These two methods
-are inverses of each other and are used by the code that fetches events
-to determine the semantics of "only following" subscriptions.
+relationship is defined in two methods on the
+:py:class:`~entity_event.models.Medium` model:
+:py:meth:`Medium.followers_of
+<entity_event.models.Medium.followers_of>` and
+:py:meth:`Medium.followed_by
+<entity_event.models.Medium.followed_by>`. These two methods are
+inverses of each other and are used by the code that fetches events to
+determine the semantics of "only following" subscriptions.
 
 It is possible to customize the behavior of these types of
-subscriptions by concretely inheriting from ``Medium``, and overriding
-these two functions. For example, we could define a type of medium
-that provides the opposite behavior, where entities follow themselves
-and their sub-entities.
+subscriptions by concretely inheriting from
+:py:class:`~entity_event.models.Medium`, and overriding these two
+functions. For example, we could define a type of medium that provides
+the opposite behavior, where entities follow themselves and their
+sub-entities.
 
 .. code-block:: python
 

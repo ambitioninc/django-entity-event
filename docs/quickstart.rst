@@ -1,3 +1,5 @@
+.. _quickstart:
+
 Quickstart and Basic Usage
 ==========================
 
@@ -25,17 +27,20 @@ Creating and Categorizing Events
 --------------------------------
 
 Django Entity Event is structured such that all events come from a
-``Source``, and can be displayed to the user from a variety of
-``Mediums``. When we're creating events, we don't need to worry much
-about what ``Medium`` the event will be displayed on, we do need to
-know what the ``Source`` of the events are.
+:py:class:`~entity_event.models.Source`, and can be displayed to the
+user from a variety of mediums. When we're creating events, we
+don't need to worry much about what
+:py:class:`~entity_event.models.Medium` the event will be displayed
+on, we do need to know what the
+:py:class:`~entity_event.models.Source` of the events are.
 
-``Source`` objects are used to categorize events. Categorizing events
-allows different types of events to be consumed differently. So,
-before we can create an event, we need to create a ``Source``
-object. It is a good idea to use sources to do fine grained
-categorization of events. To provide higher level groupings, all
-sources must reference a ``SourceGroup`` object. These objects are
+:py:class:`~entity_event.models.Source` objects are used to categorize
+events. Categorizing events allows different types of events to be
+consumed differently. So, before we can create an event, we need to
+create a :py:class:`~entity_event.models.Source` object. It is a good
+idea to use sources to do fine grained categorization of events. To
+provide higher level groupings, all sources must reference a
+:py:class:`~entity_event.models.SourceGroup` object. These objects are
 very simple to create. Here we will make a single source group and two
 different sources
 
@@ -65,12 +70,14 @@ different sources
 
 As seen above, the information required for these sources is fairly
 minimal. It is worth noting that while we only defined a single
-``SourceGroup`` object, it will often make sense to define more
-logical ``SourceGroup`` objects.
+:py:class:`~entity_event.models.SourceGroup` object, it will often
+make sense to define more logical
+:py:class:`~entity_event.models.SourceGroup` objects.
 
 Once we have sources defined, we can begin creating events. To create
-an event we use the ``Event.objects.create_event`` method. To create
-an event for the "photo-tag" group, we just need to know the source of
+an event we use the :py:meth:`Event.objects.create_event
+<entity_event.models.EventManager.create_event>` method. To create an
+event for the "photo-tag" group, we just need to know the source of
 the event, what entities are involved, and some information about what
 happened
 
@@ -110,15 +117,16 @@ handle the display logic for notifying users, but it does handle the
 subscription and event routing/querying logic that determines which
 events go where.
 
-To start, we must define a ``Medium`` object for each method our users
-will consume events from. Storing ``Medium`` objects in the database
-has two purposes. First, it is referenced when subscriptions are
-created. Second the ``Medium`` objects provide an entry point to query
-for events and have all the subscription logic and filtering taken
-care of for you.
+To start, we must define a :py:class:`~entity_event.models.Medium`
+object for each method our users will consume events from. Storing
+:py:class:`~entity_event.models.Medium` objects in the database has
+two purposes. First, it is referenced when subscriptions are
+created. Second the :py:class:`~entity_event.models.Medium` objects
+provide an entry point to query for events and have all the
+subscription logic and filtering taken care of for you.
 
-Like ``Source`` objects, ``Medium`` objects are simple to
-create
+Like :py:class:`~entity_event.models.Source` objects,
+:py:class:`~entity_event.models.Medium` objects are simple to create
 
 .. code-block:: python
 
@@ -138,12 +146,14 @@ create
 
 At first, none of the events we have been creating are accessible by
 either of these mediums. In order for the mediums to have access to
-the events, an appropriate ``Subscription`` object needs to be
-created. Creating a ``Subscription`` object encodes that an entity, or
-group of entities, wants to receive notifications of events from a
-given source, by a given medium. For example, we can create a
-subscription so that all the sub-entities of an ``all_users`` entity
-will receive notifications of new products in their newsfeed
+the events, an appropriate
+:py:class:`~entity_event.models.Subscription` object needs to be
+created. Creating a :py:class:`~entity_event.models.Subscription`
+object encodes that an entity, or group of entities, wants to receive
+notifications of events from a given source, by a given medium. For
+example, we can create a subscription so that all the sub-entities of
+an ``all_users`` entity will receive notifications of new products in
+their newsfeed
 
 .. code-block:: python
 
@@ -158,15 +168,16 @@ will receive notifications of new products in their newsfeed
         only_following=False
     )
 
-With this ``Subscription`` object defined, all events from the new
-product source will be available to the newsfeed medium.
+With this :py:class:`~entity_event.models.Subscription` object
+defined, all events from the new product source will be available to
+the newsfeed medium.
 
 If we wanted to create a subscription for users to get email
 notifications when they've been tagged in a photo, we will also create
-a ``Subscription`` object. However, unlike the new product events, not
-every event from the photos source is relevant to every user. We want
-to limit the events they receive emails about to the events where they
-are tagged in the photo.
+a :py:class:`~entity_event.models.Subscription` object. However,
+unlike the new product events, not every event from the photos source
+is relevant to every user. We want to limit the events they receive
+emails about to the events where they are tagged in the photo.
 
 In code above, you may notice the ``only_following=False``
 argument. This argument controls whether all events are relevant for
@@ -193,10 +204,11 @@ entities.
 Creating subscriptions for a whole group of people with a single entry
 into the database is very powerful. However, some users may wish to
 opt out of certain types of notifications. To accommodate this, we can
-create an ``Unsubscription`` object. These are used to unsubscribe a
-single entity from receiving notifications of a given source on a
-given medium. For example if a user wants to opt out of new product
-notifications in their newsfeed, we can create an ``Unsubscription``
+create an :py:class:`~entity_event.models.Unsubscription`
+object. These are used to unsubscribe a single entity from receiving
+notifications of a given source on a given medium. For example if a
+user wants to opt out of new product notifications in their newsfeed,
+we can create an :py:class:`~entity_event.models.Unsubscription`
 object for them
 
 .. code-block:: python
@@ -213,10 +225,11 @@ object for them
 Once this object is stored in the database, this user will no longer
 receive this type of notification.
 
-Once we have ``Medium`` objects set up for the methods of sending
-notifications, and we have our entities subscribed to sources of
-events on those mediums, we can use the ``Medium`` objects to query
-for events, which we can then display to our users.
+Once we have :py:class:`~entity_event.models.Medium` objects set up
+for the methods of sending notifications, and we have our entities
+subscribed to sources of events on those mediums, we can use the
+:py:class:`~entity_event.models.Medium` objects to query for events,
+which we can then display to our users.
 
 
 Querying Events
@@ -225,45 +238,50 @@ Querying Events
 Once we've got events being created, and subscriptions to them for a
 given medium, we'll want to display those events to our users. When
 there are a large variety of events coming into the system from many
-different sources, it would be very difficult to query the ``Event``
-model directly while still respecting all the ``Subscription`` logic
+different sources, it would be very difficult to query the
+:py:class:`~entity_event.models.Event` model directly while still
+respecting all the :py:class:`~entity_event.models.Subscription` logic
 that we hope to maintain.
 
 For this reason, Django Entity Event provides three methods to make
-querying for ``Events`` to display extremely simple. Since the
-``Medium`` objects you've created should correspond directly to a
-means by which you want to display events to users, there are three
-methods of the ``Medium`` class to perform queries.
+querying for events` to display extremely simple. Since the
+:py:class:`~entity_event.models.Medium` objects you've created should
+correspond directly to a means by which you want to display events to
+users, there are three methods of the
+:py:class:`~entity_event.models.Medium` class to perform queries.
 
-1. ``Medium.events``
-2. ``Medium.entity_events``
-3. ``Medium.events_targets``
+1. :py:meth:`Medium.events <entity_event.models.Medium.events>`
+2. :py:meth:`Medium.entity_events <entity_event.models.Medium.entity_events>`
+3. :py:meth:`Medium.events_targets <entity_event.models.Medium.events_targets>`
 
 Each of these methods return somewhat different views into the events
 that are being stored in the system. In each case, though, you will
-call these methods from an instance of ``Medium``, and the events
-returned will only be events for which there is a corresponding
-``Subscription`` object.
+call these methods from an instance of
+:py:class:`~entity_event.models.Medium`, and the events returned will
+only be events for which there is a corresponding
+:py:class:`~entity_event.models.Subscription` object.
 
-The ``Medium.events`` method can be used to return all the events for
-that medium. This method is useful for mediums that want to display
-events without any particular regard for who performed the events. For
-example, we could have a medium that aggregated all of the events from
-the new products source. If we had a medium, ``all_products_medium``,
-with the appropriate subscriptions set up, getting all the new product
-events is as simple as
+The :py:meth:`Medium.events <entity_event.models.Medium.events>`
+method can be used to return all the events for that medium. This
+method is useful for mediums that want to display events without any
+particular regard for who performed the events. For example, we could
+have a medium that aggregated all of the events from the new products
+source. If we had a medium, ``all_products_medium``, with the
+appropriate subscriptions set up, getting all the new product events
+is as simple as
 
 .. code-block:: python
 
     all_products_medium.events()
 
-The ``Medium.entity_events`` method can be used to get all the events for a
-given entity on that medium. It takes a single entity as an argument,
-and returns all the events for that entity on that medium. We could
-use this method to get events for an individual entity's newsfeed. If
-we have a large number of sources creating events, with subscriptions
-between those sources and the newsfeed, aggregating them into one
-QuerySet of events is as simple as
+The :py:meth:`Medium.entity_events
+<entity_event.models.Medium.entity_events>` method can be used to get
+all the events for a given entity on that medium. It takes a single
+entity as an argument, and returns all the events for that entity on
+that medium. We could use this method to get events for an individual
+entity's newsfeed. If we have a large number of sources creating
+events, with subscriptions between those sources and the newsfeed,
+aggregating them into one QuerySet of events is as simple as
 
 .. code-block:: python
 
@@ -272,12 +290,13 @@ QuerySet of events is as simple as
 There are some mediums that notify users of events independent of a
 pageview's request/response cycle. For example, an email medium will
 want to process batches of events, and need information about who to
-send the events to. For this use case, the ``Medium.events_targets``
-method can be used. Instead of providing a ``EventQueryset``, it
-provides a list of tuples in the form ``(event, targets)``, where
-``targets`` is a list of the entities that should receive that
-notification. We could use this function to send emails about events
-as follows
+send the events to. For this use case, the
+:py:meth:`Medium.events_targets
+<entity_event.models.Medium.events_targets>` method can be
+used. Instead of providing a ``EventQueryset``, it provides a list of
+tuples in the form ``(event, targets)``, where ``targets`` is a list
+of the entities that should receive that notification. We could use
+this function to send emails about events as follows
 
 .. code-block:: python
 
