@@ -13,10 +13,16 @@
     :alt: Number of PyPI downloads
 
 
-django-entity-event
-===============
+Django Entity Event
+===================
 
-Newsfeed-style event tracking and subscription management for django-entity.
+Django Entity Event is a great way to collect events that your users
+care about into a unified location. The parts of your code base that
+create these events are probably totally separate from the parts that
+display them, which are also separate from the parts that manage
+subscriptions to notifications. Django Entity Event makes separating
+these concerns as simple as possible, and provides convenient
+abstractions at each of these levels.
 
 Installation
 ------------
