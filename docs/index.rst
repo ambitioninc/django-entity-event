@@ -15,6 +15,7 @@ Table of Contents
 
    installation
    quickstart
+   advanced_features
    ref/entity_event
    contributing
    release_notes
