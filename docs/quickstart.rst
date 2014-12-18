@@ -72,9 +72,9 @@ Once we have sources defined, we can begin creating events. To create
 an event we use the ``Event.objects.create_event`` method. To create
 an event for the "photo-tag" group, we just need to know the source of
 the event, what entities are involved, and some information about what
-happened.
+happened
 
-..code-block:: python
+.. code-block:: python
 
     from entity_event import Event
 
