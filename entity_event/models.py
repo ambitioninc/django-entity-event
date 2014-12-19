@@ -494,7 +494,8 @@ class Medium(models.Model):
         :param entities: The Entity, or QuerySet of Entities of interest.
 
         :rtype: EntityQuerySet
-        :returns: A QuerySet of entities followed by those given.
+        :returns: A QuerySet of all the entities followed by any of
+            those given.
         """
         if isinstance(entities, Entity):
             entities = Entity.objects.filter(id=entities.id)
@@ -535,8 +536,8 @@ class Medium(models.Model):
         :param entities: The Entity, or QuerySet of Entities of interest.
 
         :rtype: EntityQuerySet
-        :returns: A QuerySet of entities who are followers of those
-            given.
+        :returns: A QuerySet of all the entities who are followers of
+            any of those given.
         """
         if isinstance(entities, Entity):
             entities = Entity.objects.filter(id=entities.id)
