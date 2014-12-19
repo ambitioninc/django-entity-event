@@ -322,7 +322,9 @@ themselves. All three methods support the following arguments:
 - ``seen``: passing ``False`` to this argument will filter the events
   to only those which have not been marked as having been seen.
 - ``include_expired``: defaults to ``False``, passing ``True`` to this
-  argument will include events that are expired.
+  argument will include events that are expired. Events with
+  expiration are discussed in
+  :py:meth:`~entity_event.models.EventManager.create_event`.
 - ``actor``: providing an entity to this parameter will filter the
   events to only those that include the given entity as an actor.
 

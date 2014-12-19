@@ -873,6 +873,31 @@ class EventManager(models.Manager):
         told to not attempt to create an event if a duplicate event
         exists.
 
+        :type source: Source
+        :param source: A ``Source`` object representing where the
+            event came from.
+
+        :type context: dict
+        :param context: A dictionary containing relevant
+            information about the event, to be serialized into
+            JSON. It is possible to load additional context
+            dynamically  when events are fetched. See the
+            documentation on the ``context_loader`` field in
+            ``Source``.
+
+        :type uuid: str
+        :param uuid: A unique string for the event. Requiring a
+            ``uuid`` allows code that creates events to ensure they do
+            not create duplicate events. This id could be, for example
+            some hash of the ``context``, or, if the creator is
+            unconcerned with creating duplicate events a call to
+            python's ``uuid1()`` in the ``uuid`` module.
+
+        :type time_expires: datetime (optional)
+        :param time_expires: If given, the default methods for
+            querying events will not return this event after this time
+            has passed.
+
         :type actors: (optional) List of entities or list of entity ids.
         :param actors: An ``EventActor`` object will be created for
             each entity in the list. This allows for subscriptions
@@ -885,11 +910,6 @@ class EventManager(models.Manager):
             before attempting to create the event. Setting this to
             ``True`` allows the creator of events to gracefully ensure
             no duplicates are created.
-
-        :param kwargs: This method requires all the arguments for
-            creating an event to be present in keyword arguments. The
-            required arguments are ``source`` and ``context``, and
-            optionally ``time_expires`` and ``uuid``.
 
         :rtype: Event
         :returns: The created event. Alternatively if a duplicate
