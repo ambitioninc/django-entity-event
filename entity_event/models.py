@@ -490,8 +490,8 @@ class Medium(models.Model):
         Return a queryset of the entities that the given entities are
         following. This needs to be the inverse of ``followers_of``.
 
-        :type entities: EntityQuerySet
-        :param entities: The QuerySet of entities of interest.
+        :type entities: Entity or EntityQuerySet
+        :param entities: The Entity, or QuerySet of Entities of interest.
 
         :rtype: EntityQuerySet
         :returns: A QuerySet of entities followed by those given.
@@ -531,8 +531,8 @@ class Medium(models.Model):
         Return a queryset of the entities that follow the given
         entities. This needs to be the inverse of ``followed_by``.
 
-        :type entities: EntityQuerySet
-        :param entities: The QuerySet of entities of interest.
+        :type entities: Entity or EntityQuerySet
+        :param entities: The Entity, or QuerySet of Entities of interest.
 
         :rtype: EntityQuerySet
         :returns: A QuerySet of entities who are followers of those
