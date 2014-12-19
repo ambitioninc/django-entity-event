@@ -164,7 +164,7 @@ their newsfeed
         medium=newsfeed_medium,
         source=product_source,
         entity=all_users,
-        subentity_kind=EntityKind.objects.get(name='user'),
+        sub_entity_kindd=EntityKind.objects.get(name='user'),
         only_following=False
     )
 
@@ -193,7 +193,7 @@ in, we'll define the subscription as follows
         medium=email_medium,
         source=photo_source,
         entity=all_users,
-        subentity_kind=EntityKind.objects.get(name='user'),
+        sub_entity_kindd=EntityKind.objects.get(name='user'),
         only_following=True
     )
 

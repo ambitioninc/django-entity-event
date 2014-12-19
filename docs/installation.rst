@@ -16,7 +16,7 @@ Use with Django
 
 To use Entity Event with django, first be sure to install it and/or
 include it in your ``requirements.txt`` Then include
-``'localized_recurrence'`` in ``settings.INSTALLED_APPS``. After it is
+``'entity_event'`` in ``settings.INSTALLED_APPS``. After it is
 included in your installed apps, run::
 
     ./manage.py migrate entity_event
