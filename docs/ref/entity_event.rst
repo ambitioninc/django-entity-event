@@ -5,28 +5,45 @@ Code documentation
 
 .. automodule:: entity_event.models
 
-.. autoclass:: Medium
-    :members: events, entity_events, events_targets, followed_by, followers_of
+.. autoclass:: Medium()
 
-.. autoclass:: Source
-    :members: get_context
+   .. automethod:: events(self, **event_filters)
 
-.. autoclass:: SourceGroup
+   .. automethod:: entity_events(self, entity, **event_filters)
 
-.. autoclass:: Unsubscription
+   .. automethod:: events_targets(self, entity_kind, **event_filters)
 
-.. autoclass:: Subscription
-    :members: subscribed_entities
+   .. automethod:: followed_by(self, entities)
 
-.. autoclass:: EventQuerySet
-    :members: mark_seen
+   .. automethod:: followers_of(self, entities)
 
-.. autoclass:: EventManager
-    :members: create_event, mark_seen
 
-.. autoclass:: Event
-    :members: get_context
+.. autoclass:: Source()
 
-.. autoclass:: EventActor
+    .. automethod:: get_context(self, context)
 
-.. autoclass:: EventSeen
+.. autoclass:: SourceGroup()
+
+.. autoclass:: Unsubscription()
+
+.. autoclass:: Subscription()
+
+   .. automethod:: subscribed_entities(self)
+
+.. autoclass:: EventQuerySet()
+
+   .. automethod:: mark_seen(self, medium)
+
+.. autoclass:: EventManager()
+
+   .. automethod:: create_event(self, source, context, uuid, time_expires, actors, ignore_duplicates)
+
+   .. automethod:: mark_seen(self, medium)
+
+.. autoclass:: Event()
+
+   .. automethod:: get_context(self)
+
+.. autoclass:: EventActor()
+
+.. autoclass:: EventSeen()
