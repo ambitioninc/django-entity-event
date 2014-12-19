@@ -34,7 +34,7 @@ class Medium(models.Model):
     :param description: A human readable description of the
         medium.
 
-    Encoding a ``Medium`` object in the database server two
+    Encoding a ``Medium`` object in the database serves two
     purposes. First, it is referenced when subscriptions are
     created. Second the ``Medium`` objects provide an entry point to
     query for events and have all the subscription logic and filtering
