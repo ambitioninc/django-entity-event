@@ -164,7 +164,7 @@ their newsfeed
         medium=newsfeed_medium,
         source=product_source,
         entity=all_users,
-        sub_entity_kindd=EntityKind.objects.get(name='user'),
+        sub_entity_kind=EntityKind.objects.get(name='user'),
         only_following=False
     )
 
@@ -193,7 +193,7 @@ in, we'll define the subscription as follows
         medium=email_medium,
         source=photo_source,
         entity=all_users,
-        sub_entity_kindd=EntityKind.objects.get(name='user'),
+        sub_entity_kind=EntityKind.objects.get(name='user'),
         only_following=True
     )
 
@@ -316,9 +316,9 @@ arguments for filtering the events based on properties of the events
 themselves. All three methods support the following arguments:
 
 - ``start_time``: providing a datetime object to this parameter will
-  filter the events to only those that occurred after this time
+  filter the events to only those that occurred at or after this time.
 - ``end_time``: providing a datetime object to this parameter will
-  filter the events to only those that occurred before this time.
+  filter the events to only those that occurred at or before this time.
 - ``seen``: passing ``False`` to this argument will filter the events
   to only those which have not been marked as having been seen.
 - ``include_expired``: defaults to ``False``, passing ``True`` to this
