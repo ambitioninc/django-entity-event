@@ -2,7 +2,7 @@ Sphinx>=1.2.2
 sphinx_rtd_theme
 psycopg2>=2.4.5
 django>=1.6,<1.7
-djcelery
+django-celery
 cached-property>=0.1.5
 django-entity>=1.7.1
 jsonfield>=0.9.20
