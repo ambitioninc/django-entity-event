@@ -51,7 +51,7 @@ setup(
         'south',
         'mock>=1.0.1',
         'coverage>=3.7.1',
-        'freezegun',
+        'freezegun==0.2.2',
         'django-dynamic-fixture'
     ],
     test_suite='run_tests.run_tests',
