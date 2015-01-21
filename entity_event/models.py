@@ -437,7 +437,8 @@ class Medium(models.Model):
         if seen is True:
             filters.append(Q(eventseen__medium=self))
         elif seen is False:
-            filters.append(~Q(eventseen__medium=self))
+            unseen_ids = _unseen_event_ids(medium=self)
+            filters.append(Q(id__in=unseen_ids))
 
         # Filter by actor
         if actor is not None:
