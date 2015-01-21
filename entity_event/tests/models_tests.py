@@ -225,6 +225,27 @@ class MediumSubsetSubscriptionsTest(TestCase):
         self.assertEqual(subs.count(), 0)
 
 
+class MediumGetFilteredEventsTest(TestCase):
+    def setUp(self):
+        self.medium = G(Medium)
+
+    def test_get_unseen_events_some_seen_some_not(self):
+        seen_e = G(Event, context={})
+        G(EventSeen, event=seen_e, medium=self.medium)
+        unseen_e = G(Event, context={})
+
+        events = self.medium.get_filtered_events(seen=False)
+        self.assertEquals(list(events), [unseen_e])
+
+    def test_get_unseen_events_some_seen_from_other_mediums(self):
+        seen_from_other_medium_e = G(Event, context={})
+        G(EventSeen, event=seen_from_other_medium_e)
+        unseen_e = G(Event, context={})
+
+        events = self.medium.get_filtered_events(seen=False)
+        self.assertEquals(set(events), set([unseen_e, seen_from_other_medium_e]))
+
+
 class MediumGetEventFiltersTest(TestCase):
     def setUp(self):
         self.medium = G(Medium)
