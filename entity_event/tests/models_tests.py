@@ -8,7 +8,7 @@ from freezegun import freeze_time
 from six import text_type
 
 from entity_event.models import (
-    Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen
+    Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen, _unseen_event_ids
 )
 
 
@@ -386,6 +386,28 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
     def test_length_indiv(self):
         indiv_qs = self.indiv_sub.subscribed_entities()
         self.assertEqual(indiv_qs.count(), 1)
+
+
+class UnseenEventIdsTest(TestCase):
+    def test_filters_seen(self):
+        m = G(Medium)
+        e1 = G(Event, context={})
+        e2 = G(Event, context={})
+        Event.objects.filter(id=e2.id).mark_seen(m)
+        unseen_ids = _unseen_event_ids(m)
+        self.assertEqual(unseen_ids, [e1.id])
+
+    def test_multiple_mediums(self):
+        m1 = G(Medium)
+        m2 = G(Medium)
+        e1 = G(Event, context={})
+        e2 = G(Event, context={})
+        e3 = G(Event, context={})
+        e4 = G(Event, context={})
+        Event.objects.filter(id=e2.id).mark_seen(m1)
+        Event.objects.filter(id=e3.id).mark_seen(m2)
+        unseen_ids = _unseen_event_ids(m1)
+        self.assertEqual(set(unseen_ids), set([e1.id, e3.id, e4.id]))
 
 
 # Note: The following freeze_time a few more minutes than what we
