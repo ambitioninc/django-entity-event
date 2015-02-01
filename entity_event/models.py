@@ -7,6 +7,8 @@ from django.core.exceptions import ValidationError, ImproperlyConfigured
 from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.query import QuerySet
+from django.template.loader import render_to_string
+from django.template import Context, Template
 from django.utils.encoding import python_2_unicode_compatible
 from django.utils.module_loading import import_by_path
 import jsonfield
@@ -1066,3 +1068,89 @@ def _unseen_event_ids(medium):
     unseen_events = Event.objects.raw(query, params=[medium.id])
     ids = [e.id for e in unseen_events]
     return ids
+
+
+@python_2_unicode_compatible
+class ContextRenderer(models.Model):
+    """``ContextRenderer`` objects store information about how
+    a source is rendered to a particular rendering group, along with
+    information for loading the render context in a database-efficient
+    manner.
+
+    This object defines the templates used to render a context for
+    a given source and render group.
+
+    Of the four template fields: `text_template_path`, 'html_template_path',
+    `text_template`, and `html_template`, at least one must be
+    non-empty.
+
+    Both a text and html template may be provided, either
+    through a path to the template, or a raw template object.
+
+    However, for either text or html templates, both a path and raw
+    template should not be provided.
+
+    This object also specifies a render group in order for mediums
+    to specify the template renderer they utilize for different
+    sources.
+    """
+    template_name = models.CharField(max_length=64, unique=True)
+    text_template_path = models.CharField(max_length=256, default='')
+    html_template_path = models.CharField(max_length=256, default='')
+    text_template = models.TextField(default='')
+    html_template = models.TextField(default='')
+
+    # The source of the event
+    source = models.ForeignKey(Source)
+
+    # Containts hints on how to fetch the context from the database
+    context_hints = models.JSONField(null=True, default=None)
+
+    def clean(self):
+        template_fields = [
+            self.text_template_path, self.html_template_path,
+            self.text_template, self.html_template
+        ]
+        if not any(template_fields):
+            raise ValidationError('At least one template source must be provided')
+        if self.text_template_path and self.text_template:
+            raise ValidationError('Cannot provide a template path and template')
+        if self.html_template_path and self.html_template:
+            raise ValidationError('Cannot provide a template path and template')
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super(ContextRenderer, self).save(*args, **kwargs)
+
+    def __unicode__(self):
+        return self.template_name
+
+    def render_text_or_html_template(self, context, is_text=True):
+        """
+        Renders a text or html template based on either the template path or the
+        stored template.
+        """
+        template_path = getattr(self, '{0}_template_path'.format('text' if is_text else 'html'))
+        template = getattr(self, '{0}_template'.format('text' if is_text else 'html'))
+        if template_path:
+            return render_to_string(template_path, context)
+        elif template:
+            return Template(template).render(Context(context))
+        else:
+            return ''
+
+    def render_context_to_text_html_templates(self, context):
+        """Render the templates with the provided context.
+
+        Args:
+          A loaded context.
+
+        Returns:
+          A tuple of (rendered_text, rendered_html). Either, but not both
+          may be an empty string.
+        """
+        # Process text template:
+        return (
+            self.render_text_or_html_template(context, is_text=True),
+            self.render_text_or_html_template(context, is_text=False),
+        )
