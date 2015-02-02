@@ -4,6 +4,7 @@ A module for loading contexts using context hints.
 from collection import defaultdict
 
 from django.db.models.loading import get_model
+from manager_utils import id_dict
 
 
 # Get the querysets for each model. The context hints are needed for
@@ -13,7 +14,7 @@ from django.db.models.loading import get_model
 # querysets = {
 #    model: queryset,
 # }
-def get_querysets_for_context_hints(context_hints_list):
+def get_querysets_for_context_hints(context_hints_per_source):
     """
     Given a list of context hint dictionaries, return a dictionary
     of querysets for efficient context loading. The return value
@@ -27,7 +28,7 @@ def get_querysets_for_context_hints(context_hints_list):
     model_select_relateds = defaultdict(set)
     model_prefetch_relateds = defaultdict(set)
     model_querysets = {}
-    for context_hints in context_hints_list:
+    for context_hints in context_hints_per_source.values():
         for hints in context_hints.values():
             model = get_model(hints['app_name'], hints['model_name'])
             model_querysets[model] = model.objects
@@ -44,12 +45,48 @@ def get_querysets_for_context_hints(context_hints_list):
     return model_querysets
 
 
+def dict_find(d, which_key):
+    """
+    Finds key values in a nested dictionary
+    """
+    for k, v in d.iteritems():
+        if k == which_key:
+            for value in v if isinstance(v, list) else [v]:
+                yield value
+        elif isinstance(v, dict):
+            for result in dict_find(v, which_key):
+                yield result
+        elif isinstance(v, list):
+            for i in v:
+                for result in dict_find(i, which_key):
+                    yield result
+
+
 # Get the ids of each model that will need to be fetched. The context
 # and context hints will need to be provided for this
 #
-# models_to_fetch = {
-#   model: id_list,
+# model_ids_to_fetch = {
+#   model: id_set,
 # }
+def get_model_ids_to_fetch(events, context_hints_per_source):
+    """
+    Obtains the ids of all models that need to be fetched. Returns a dictionary of models that
+    point to sets of ids that need to be fetched. Return output is as follows:
+
+    {
+        model: [id1, id2, ...],
+        ...
+    }
+    """
+    model_ids_to_fetch = defaultdict(set)
+
+    for event in events:
+        context_hints = context_hints_per_source[event.source]
+        for context_key, hints in context_hints.items():
+            model_ids_to_fetch[get_model(hints['app_name'], hints['model_name'])].union(
+                v for v in dict_find(event.context, context_key)
+            )
+
 
 # Fetch the models for each ID and return them in a dictionary keyed on
 # the model
@@ -59,6 +96,24 @@ def get_querysets_for_context_hints(context_hints_list):
 #     id: obj,
 #   },
 # }
+def fetch_model_data(model_querysets, model_ids_to_fetch):
+    """
+    Given a dictionary of models to querysets and model IDs to models, fetch the IDs
+    for every model and return the objects in the following structure.
+
+    {
+        model: {
+            id: obj,
+            ...
+        },
+        ...
+    }
+    """
+    return {
+        model: id_dict(model_querysets[model].filter(id__in=ids_to_fetch))
+        for model, ids_to_fetch in model_ids_to_fetch.items()
+    }
+
 
 # Group each source by the objects that need to be populated in the context
 #
