@@ -58,6 +58,7 @@ class Medium(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
+    render_target = models.ForeignKey('RenderTarget')
 
     def __str__(self):
         """Readable representation of ``Medium`` objects."""
@@ -1071,6 +1072,15 @@ def _unseen_event_ids(medium):
 
 
 @python_2_unicode_compatible
+class RenderGroup(models.Model):
+    """
+    Defines a grouping of things that have events rendered the same way.
+    """
+    name = models.CharField(max_length=64, unique=True)
+    display_name = models.CharField(max_length=64, default='')
+
+
+@python_2_unicode_compatible
 class ContextRenderer(models.Model):
     """``ContextRenderer`` objects store information about how
     a source is rendered to a particular rendering group, along with
@@ -1094,7 +1104,9 @@ class ContextRenderer(models.Model):
     to specify the template renderer they utilize for different
     sources.
     """
-    template_name = models.CharField(max_length=64, unique=True)
+    name = models.CharField(max_length=64, unique=True)
+
+    # The various templates that can be used for rendering
     text_template_path = models.CharField(max_length=256, default='')
     html_template_path = models.CharField(max_length=256, default='')
     text_template = models.TextField(default='')
@@ -1102,6 +1114,9 @@ class ContextRenderer(models.Model):
 
     # The source of the event
     source = models.ForeignKey(Source)
+
+    # The render group. Used to associated it with a medium
+    render_group = models.ForeignKey(RenderGroup)
 
     # Containts hints on how to fetch the context from the database
     context_hints = models.JSONField(null=True, default=None)
