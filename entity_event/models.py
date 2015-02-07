@@ -1124,22 +1124,6 @@ class ContextRenderer(models.Model):
     # Containts hints on how to fetch the context from the database
     context_hints = jsonfield.JSONField(null=True, default=None)
 
-    def clean(self):
-        template_fields = [
-            self.text_template_path, self.html_template_path,
-            self.text_template, self.html_template
-        ]
-        if not any(template_fields):
-            raise ValidationError('At least one template source must be provided')
-        if self.text_template_path and self.text_template:
-            raise ValidationError('Cannot provide a template path and template')
-        if self.html_template_path and self.html_template:
-            raise ValidationError('Cannot provide a template path and template')
-
-    def save(self, *args, **kwargs):
-        self.clean()
-        super(ContextRenderer, self).save(*args, **kwargs)
-
     def __str__(self):
         return self.template_name
 

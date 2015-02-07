@@ -133,7 +133,7 @@ def load_fetched_objects_into_contexts(events, model_data, context_hints_per_sou
     event and populate the contexts with the loaded information.
     """
     for event in events:
-        context_hints = context_hints_per_source[event.source]
+        context_hints = context_hints_per_source.get(event.source, {})
         for context_key, hints in context_hints.items():
             model = get_model(hints['app_name'], hints['model_name'])
             for d, value in dict_find(event.context, context_key):

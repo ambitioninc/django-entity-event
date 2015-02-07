@@ -381,3 +381,73 @@ class FetchModelDataTest(TestCase):
             test_models.TestModel: [m1.id, m2.id],
             test_models.TestFKModel: [m3.id],
         }))
+
+
+class LoadFetchedObjectsIntoContextsTest(SimpleTestCase):
+    def test_none(self):
+        context_loader.load_fetched_objects_into_contexts([], {}, {})
+
+    def test_event_with_no_model_data(self):
+        e = N(models.Event, persist_dependencies=False, context={'hi', 'hi'})
+        context_loader.load_fetched_objects_into_contexts([e], {}, {})
+        self.assertEquals(e, e)
+
+    def test_one_event_w_model_data(self):
+        m = N(test_models.TestModel, persist_dependencies=False, id=2)
+        s = N(models.Source, persist_dependencies=False, id=1)
+        hints = {
+            s: {
+                'key': {
+                    'model_name': 'TestModel',
+                    'app_name': 'tests',
+                }
+            }
+        }
+        e = N(models.Event, persist_dependencies=False, context={'key': m.id}, source=s)
+        context_loader.load_fetched_objects_into_contexts([e], {test_models.TestModel: {m.id: m}}, hints)
+        self.assertEquals(e.context, {'key': m})
+
+    def test_one_event_w_list_model_data(self):
+        m1 = N(test_models.TestModel, persist_dependencies=False, id=2)
+        m2 = N(test_models.TestModel, persist_dependencies=False, id=3)
+        s = N(models.Source, persist_dependencies=False, id=1)
+        hints = {
+            s: {
+                'key': {
+                    'model_name': 'TestModel',
+                    'app_name': 'tests',
+                }
+            }
+        }
+        e = N(models.Event, persist_dependencies=False, context={'key': [m1.id, m2.id]}, source=s)
+        context_loader.load_fetched_objects_into_contexts([e], {test_models.TestModel: {m1.id: m1, m2.id: m2}}, hints)
+        self.assertEquals(e.context, {'key': [m1, m2]})
+
+
+class LoadContextsTest(TestCase):
+    """
+    Integration tests for loading contexts into events.
+    """
+    def test_none(self):
+        context_loader.load_contexts([], [])
+
+    def test_no_mediums(self):
+        e = G(models.Event, context={})
+        context_loader.load_contexts([e], [])
+        self.assertEquals(e.context, {})
+
+    def test_one_render_target(self):
+        m1 = G(test_models.TestModel)
+        s = G(models.Source)
+        rg = G(models.RenderGroup)
+        e = G(models.Event, context={'key': m1.id}, source=s)
+        medium = G(models.Medium, source=s, render_group=rg)
+        G(models.ContextRenderer, render_group=rg, source=s, context_hints={
+            'key': {
+                'model_name': 'TestModel',
+                'app_name': 'tests',
+            }
+        })
+
+        context_loader.load_contexts([e], [medium])
+        self.assertEquals(e.context, {'key': m1})
