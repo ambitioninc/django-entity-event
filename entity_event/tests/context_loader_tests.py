@@ -351,3 +351,33 @@ class GetModelIdsToFetchTest(SimpleTestCase):
             test_models.TestModel: set([2, 3, 5, 88, 100]),
             test_models.TestFKModel: set([50, 60])
         })
+
+
+class FetchModelDataTest(TestCase):
+    def test_none(self):
+        self.assertEquals({}, context_loader.fetch_model_data({}, {}))
+
+    def test_one_model_one_id_to_fetch(self):
+        m1 = G(test_models.TestModel)
+        self.assertEquals({
+            test_models.TestModel: {m1.id: m1}
+        }, context_loader.fetch_model_data({
+            test_models.TestModel: test_models.TestModel.objects
+        }, {
+            test_models.TestModel: [m1.id]
+        }))
+
+    def test_multiple_models_multiple_ids_to_fetch(self):
+        m1 = G(test_models.TestModel)
+        m2 = G(test_models.TestModel)
+        m3 = G(test_models.TestFKModel)
+        self.assertEquals({
+            test_models.TestModel: {m1.id: m1, m2.id: m2},
+            test_models.TestFKModel: {m3.id: m3}
+        }, context_loader.fetch_model_data({
+            test_models.TestModel: test_models.TestModel.objects,
+            test_models.TestFKModel: test_models.TestFKModel.objects,
+        }, {
+            test_models.TestModel: [m1.id, m2.id],
+            test_models.TestFKModel: [m3.id],
+        }))
