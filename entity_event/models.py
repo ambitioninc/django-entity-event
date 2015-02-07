@@ -58,7 +58,7 @@ class Medium(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
-    render_target = models.ForeignKey('RenderTarget')
+    render_group = models.ForeignKey('RenderGroup')
 
     def __str__(self):
         """Readable representation of ``Medium`` objects."""
@@ -1079,6 +1079,9 @@ class RenderGroup(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64, default='')
 
+    def __str__(self):
+        return self.display_name
+
 
 @python_2_unicode_compatible
 class ContextRenderer(models.Model):
@@ -1119,7 +1122,7 @@ class ContextRenderer(models.Model):
     render_group = models.ForeignKey(RenderGroup)
 
     # Containts hints on how to fetch the context from the database
-    context_hints = models.JSONField(null=True, default=None)
+    context_hints = jsonfield.JSONField(null=True, default=None)
 
     def clean(self):
         template_fields = [
@@ -1137,7 +1140,7 @@ class ContextRenderer(models.Model):
         self.clean()
         super(ContextRenderer, self).save(*args, **kwargs)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.template_name
 
     def render_text_or_html_template(self, context, is_text=True):

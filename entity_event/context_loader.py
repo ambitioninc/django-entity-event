@@ -1,7 +1,7 @@
 """
 A module for loading contexts using context hints.
 """
-from collection import defaultdict
+from collections import defaultdict
 
 from django.db.models.loading import get_model
 from manager_utils import id_dict
@@ -16,18 +16,18 @@ def get_context_hints_per_source(context_renderers):
     # Merge the context render hints for each source as there can be multiple context hints for
     # sources depending on the render target. Merging them together involves combining select
     # and prefetch related hints for each context renderer
-    context_hints_per_source = defaultdict(lambda: {
+    context_hints_per_source = defaultdict(lambda: defaultdict(lambda: {
         'app_name': None,
         'model_name': None,
         'select_related': set(),
         'prefetch_related': set(),
-    })
+    }))
     for cr in context_renderers:
         for key, hints in cr.context_hints.items():
             context_hints_per_source[cr.source][key]['app_name'] = hints['app_name']
             context_hints_per_source[cr.source][key]['model_name'] = hints['model_name']
-            context_hints_per_source[cr.source][key]['select_related'].add(hints.get('select_related', []))
-            context_hints_per_source[cr.source][key]['prefetch_related'].add(hints.get('prefetch_related', []))
+            context_hints_per_source[cr.source][key]['select_related'].update(hints.get('select_related', []))
+            context_hints_per_source[cr.source][key]['prefetch_related'].update(hints.get('prefetch_related', []))
 
     return context_hints_per_source
 
@@ -50,8 +50,8 @@ def get_querysets_for_context_hints(context_hints_per_source):
         for hints in context_hints.values():
             model = get_model(hints['app_name'], hints['model_name'])
             model_querysets[model] = model.objects
-            model_select_relateds[model].union(hints.get('select_related', []))
-            model_prefetch_relateds[model].union(hints.get('prefetch_related', []))
+            model_select_relateds[model].update(hints.get('select_related', []))
+            model_prefetch_relateds[model].update(hints.get('prefetch_related', []))
 
     # Attach select and prefetch related parameters to the querysets if needed
     for model, queryset in model_querysets.items():
