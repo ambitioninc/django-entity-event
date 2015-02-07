@@ -492,3 +492,56 @@ class LoadContextsTest(TestCase):
         self.assertEquals(e2.context, {'key': [test_m2, test_m3]})
         self.assertEquals(e3.context, {'key2': test_fk_m1, 'key': test_m1})
         self.assertEquals(e4.context, {'key2': test_fk_m2})
+
+    def test_optimal_queries(self):
+        fk1 = G(test_models.TestFKModel)
+        fk11 = G(test_models.TestFKModel)
+        fk2 = G(test_models.TestFKModel2)
+        test_m1 = G(test_models.TestModel, fk=fk1, fk2=fk2)
+        test_m1.fk_m2m.add(fk1, fk11)
+        test_m2 = G(test_models.TestModel, fk=fk1, fk2=fk2)
+        test_m2.fk_m2m.add(fk1, fk11)
+        test_m3 = G(test_models.TestModel, fk=fk1, fk2=fk2)
+        test_fk_m1 = G(test_models.TestFKModel)
+        test_fk_m2 = G(test_models.TestFKModel)
+        s1 = G(models.Source)
+        s2 = G(models.Source)
+        rg1 = G(models.RenderGroup)
+        rg2 = G(models.RenderGroup)
+        medium1 = G(models.Medium, source=s1, render_group=rg1)
+        medium2 = G(models.Medium, source=s2, render_group=rg2)
+
+        G(models.ContextRenderer, render_group=rg1, source=s1, context_hints={
+            'key': {
+                'model_name': 'TestModel',
+                'app_name': 'tests',
+                'select_related': ['fk'],
+            }
+        })
+        G(models.ContextRenderer, render_group=rg2, source=s2, context_hints={
+            'key': {
+                'model_name': 'TestModel',
+                'app_name': 'tests',
+                'select_related': ['fk2'],
+                'prefetch_related': ['fk_m2m'],
+            },
+            'key2': {
+                'model_name': 'TestFKModel',
+                'app_name': 'tests',
+            }
+        })
+
+        e1 = G(models.Event, context={'key': test_m1.id, 'key2': 'haha'}, source=s1)
+        e2 = G(models.Event, context={'key': [test_m2.id, test_m3.id]}, source=s1)
+        e3 = G(models.Event, context={'key2': test_fk_m1.id, 'key': test_m1.id}, source=s2)
+        e4 = G(models.Event, context={'key2': test_fk_m2.id}, source=s2)
+
+        with self.assertNumQueries(6):
+            context_loader.load_contexts([e1, e2, e3, e4], [medium1, medium2])
+            self.assertEquals(e1.context['key'].fk, fk1)
+            self.assertEquals(e2.context['key'][0].fk, fk1)
+            self.assertEquals(e1.context['key'].fk2, fk2)
+            self.assertEquals(e2.context['key'][0].fk2, fk2)
+            self.assertEquals(set(e1.context['key'].fk_m2m.all()), set([fk1, fk11]))
+            self.assertEquals(set(e2.context['key'][0].fk_m2m.all()), set([fk1, fk11]))
+            self.assertEquals(e3.context['key'].fk, fk1)
