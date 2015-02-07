@@ -222,3 +222,132 @@ class TestGetQuerysetsForContextHintsDbTests(TestCase):
             self.assertEquals(v.fk, fk)
             self.assertEquals(v.fk2, fk2)
             self.assertEquals(set(v.fk_m2m.all()), set(m2ms))
+
+
+class DictFindTest(SimpleTestCase):
+    def test_dict_find_none(self):
+        self.assertEquals(list(context_loader.dict_find({}, 'key')), [])
+
+    def test_dict_find_list_key(self):
+        d = {'key': ['value']}
+        self.assertEquals(list(context_loader.dict_find(d, 'key')), [(d, ['value'])])
+
+    def test_dict_find_nested_list_key(self):
+        d = {'key': ['value']}
+        larger_dict = {
+            'l': [{
+                'hi': {},
+            }, {
+                'hi2': d
+            }]
+        }
+        self.assertEquals(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value'])])
+
+    def test_dict_find_double_nested_list_key(self):
+        d = {'key': ['value']}
+        larger_dict = {
+            'l': [{
+                'hi': {},
+            }, {
+                'hi2': d
+            }],
+            'hi3': d
+        }
+        self.assertEquals(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value']), (d, ['value'])])
+
+    def test_dict_find_deep_nested_list_key(self):
+        d = {'key': ['value']}
+        larger_dict = [[{
+            'l': [{
+                'hi': {},
+            }, {
+                'hi2': d
+            }],
+            'hi3': d
+        }]]
+        self.assertEquals(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value']), (d, ['value'])])
+
+
+class GetModelIdsToFetchTest(SimpleTestCase):
+    def test_no_events(self):
+        self.assertEquals(context_loader.get_model_ids_to_fetch([], {}), {})
+
+    def test_no_context_hints(self):
+        e = N(models.Event, context={}, persist_dependencies=False)
+        self.assertEquals(context_loader.get_model_ids_to_fetch([e], {}), {})
+
+    def test_w_one_event_one_context_hint_single_pk(self):
+        source = N(models.Source, persist_dependencies=False, id=1)
+        hints = {
+            source: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                },
+            },
+        }
+        e = N(models.Event, context={'key': 2}, persist_dependencies=False, source=source)
+        self.assertEquals(context_loader.get_model_ids_to_fetch([e], hints), {
+            test_models.TestModel: set([2])
+        })
+
+    def test_w_one_event_one_context_hint_list_pks(self):
+        source = N(models.Source, persist_dependencies=False, id=1)
+        hints = {
+            source: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                },
+            },
+        }
+        e = N(models.Event, context={'key': [2, 3, 5]}, persist_dependencies=False, source=source)
+        self.assertEquals(context_loader.get_model_ids_to_fetch([e], hints), {
+            test_models.TestModel: set([2, 3, 5])
+        })
+
+    def test_w_multiple_events_one_context_hint_list_pks(self):
+        source = N(models.Source, persist_dependencies=False, id=1)
+        hints = {
+            source: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                },
+            },
+        }
+        e1 = N(models.Event, context={'key': [2, 3, 5]}, persist_dependencies=False, source=source)
+        e2 = N(models.Event, context={'key': 88}, persist_dependencies=False, source=source)
+        self.assertEquals(context_loader.get_model_ids_to_fetch([e1, e2], hints), {
+            test_models.TestModel: set([2, 3, 5, 88])
+        })
+
+    def test_w_multiple_events_multiple_context_hints_list_pks(self):
+        source1 = N(models.Source, persist_dependencies=False, id=1)
+        source2 = N(models.Source, persist_dependencies=False, id=2)
+        hints = {
+            source1: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                },
+            },
+            source2: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                },
+                'key2': {
+                    'app_name': 'tests',
+                    'model_name': 'TestFKModel',
+                },
+            },
+        }
+        e1 = N(models.Event, context={'key': [2, 3, 5]}, persist_dependencies=False, source=source1)
+        e2 = N(models.Event, context={'key': 88}, persist_dependencies=False, source=source1)
+        e3 = N(models.Event, context={'key': 100, 'key2': [50]}, persist_dependencies=False, source=source2)
+        e4 = N(models.Event, context={'key2': [60]}, persist_dependencies=False, source=source2)
+        self.assertEquals(context_loader.get_model_ids_to_fetch([e1, e2, e3, e4], hints), {
+            test_models.TestModel: set([2, 3, 5, 88, 100]),
+            test_models.TestFKModel: set([50, 60])
+        })

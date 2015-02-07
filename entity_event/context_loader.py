@@ -69,16 +69,19 @@ def dict_find(d, which_key):
     Finds key values in a nested dictionary. Returns a tuple of the dictionary in which
     the key was found along with the value
     """
-    for k, v in d.items():
-        if k == which_key:
-            yield d, v
-        elif isinstance(v, dict):
+    # If the starting point is a list, iterate recursively over all values
+    if isinstance(d, (list, tuple)):
+        for i in d:
+            for result in dict_find(i, which_key):
+                yield result
+
+    # Else, iterate over all key values of the dictionary
+    elif isinstance(d, dict):
+        for k, v in d.items():
+            if k == which_key:
+                yield d, v
             for result in dict_find(v, which_key):
                 yield result
-        elif isinstance(v, list):
-            for i in v:
-                for result in dict_find(i, which_key):
-                    yield result
 
 
 def get_model_ids_to_fetch(events, context_hints_per_source):
@@ -94,13 +97,15 @@ def get_model_ids_to_fetch(events, context_hints_per_source):
     model_ids_to_fetch = defaultdict(set)
 
     for event in events:
-        context_hints = context_hints_per_source[event.source]
+        context_hints = context_hints_per_source.get(event.source, {})
         for context_key, hints in context_hints.items():
             for d, value in dict_find(event.context, context_key):
                 values = value if isinstance(value, list) else [value]
-                model_ids_to_fetch[get_model(hints['app_name'], hints['model_name'])].union(
+                model_ids_to_fetch[get_model(hints['app_name'], hints['model_name'])].update(
                     v for v in values if isinstance(v, int)
                 )
+
+    return model_ids_to_fetch
 
 
 def fetch_model_data(model_querysets, model_ids_to_fetch):
