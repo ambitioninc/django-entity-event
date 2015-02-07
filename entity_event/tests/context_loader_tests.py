@@ -436,7 +436,7 @@ class LoadContextsTest(TestCase):
         context_loader.load_contexts([e], [])
         self.assertEquals(e.context, {})
 
-    def test_one_render_target(self):
+    def test_one_render_target_one_event(self):
         m1 = G(test_models.TestModel)
         s = G(models.Source)
         rg = G(models.RenderGroup)
@@ -451,3 +451,44 @@ class LoadContextsTest(TestCase):
 
         context_loader.load_contexts([e], [medium])
         self.assertEquals(e.context, {'key': m1})
+
+    def test_multiple_render_targets_multiple_events(self):
+        test_m1 = G(test_models.TestModel)
+        test_m2 = G(test_models.TestModel)
+        test_m3 = G(test_models.TestModel)
+        test_fk_m1 = G(test_models.TestFKModel)
+        test_fk_m2 = G(test_models.TestFKModel)
+        s1 = G(models.Source)
+        s2 = G(models.Source)
+        rg1 = G(models.RenderGroup)
+        rg2 = G(models.RenderGroup)
+        medium1 = G(models.Medium, source=s1, render_group=rg1)
+        medium2 = G(models.Medium, source=s2, render_group=rg2)
+
+        G(models.ContextRenderer, render_group=rg1, source=s1, context_hints={
+            'key': {
+                'model_name': 'TestModel',
+                'app_name': 'tests',
+            }
+        })
+        G(models.ContextRenderer, render_group=rg2, source=s2, context_hints={
+            'key': {
+                'model_name': 'TestModel',
+                'app_name': 'tests',
+            },
+            'key2': {
+                'model_name': 'TestFKModel',
+                'app_name': 'tests',
+            }
+        })
+
+        e1 = G(models.Event, context={'key': test_m1.id, 'key2': 'haha'}, source=s1)
+        e2 = G(models.Event, context={'key': [test_m2.id, test_m3.id]}, source=s1)
+        e3 = G(models.Event, context={'key2': test_fk_m1.id, 'key': test_m1.id}, source=s2)
+        e4 = G(models.Event, context={'key2': test_fk_m2.id}, source=s2)
+
+        context_loader.load_contexts([e1, e2, e3, e4], [medium1, medium2])
+        self.assertEquals(e1.context, {'key': test_m1, 'key2': 'haha'})
+        self.assertEquals(e2.context, {'key': [test_m2, test_m3]})
+        self.assertEquals(e3.context, {'key2': test_fk_m1, 'key': test_m1})
+        self.assertEquals(e4.context, {'key2': test_fk_m2})
