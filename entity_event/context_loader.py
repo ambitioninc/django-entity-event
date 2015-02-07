@@ -56,9 +56,10 @@ def get_querysets_for_context_hints(context_hints_per_source):
     # Attach select and prefetch related parameters to the querysets if needed
     for model, queryset in model_querysets.items():
         if model_select_relateds[model]:
-            model_querysets[model] = queryset.select_related(*model_select_relateds[model])
+            queryset = queryset.select_related(*model_select_relateds[model])
         if model_prefetch_relateds[model]:
-            model_querysets[model] = queryset.prefetch_related(*model_prefetch_relateds[model])
+            queryset = queryset.prefetch_related(*model_prefetch_relateds[model])
+        model_querysets[model] = queryset
 
     return model_querysets
 

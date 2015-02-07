@@ -1,5 +1,5 @@
-from django.test import SimpleTestCase
-from django_dynamic_fixture import N
+from django.test import SimpleTestCase, TestCase
+from django_dynamic_fixture import N, G
 
 from entity_event import context_loader
 from entity_event import models
@@ -152,3 +152,73 @@ class TestGetQuerysetsForContextHints(SimpleTestCase):
         )
 
         self.assertEquals(str(qsets[test_models.TestModel].query), raw_sql)
+
+    def test_multiple_context_hints_w_multiple_select_related_multiple_prefetch_related(self):
+        source = N(models.Source, persist_dependencies=False, id=1)
+        source2 = N(models.Source, persist_dependencies=False, id=2)
+        qsets = context_loader.get_querysets_for_context_hints({
+            source: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                    'select_related': ['fk'],
+                    'prefetch_related': ['fk_m2m'],
+                },
+            },
+            source2: {
+                'key2': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                    'select_related': ['fk2'],
+                },
+            }
+        })
+
+        # Verify the raw sql to ensure select relateds will happen. Note that prefetch relateds are not
+        # included in raw sql
+        raw_sql = (
+            'SELECT "tests_testmodel"."id", "tests_testmodel"."value", "tests_testmodel"."fk_id", '
+            '"tests_testmodel"."fk2_id", '
+            '"tests_testfkmodel"."id", "tests_testfkmodel"."value", '
+            '"tests_testfkmodel2"."id", "tests_testfkmodel2"."value" FROM "tests_testmodel" INNER JOIN '
+            '"tests_testfkmodel" ON ( "tests_testmodel"."fk_id" = "tests_testfkmodel"."id" ) '
+            'INNER JOIN "tests_testfkmodel2" ON ( "tests_testmodel"."fk2_id" = "tests_testfkmodel2"."id" )'
+        )
+
+        self.assertEquals(str(qsets[test_models.TestModel].query), raw_sql)
+
+
+class TestGetQuerysetsForContextHintsDbTests(TestCase):
+    def test_multiple_context_hints_w_multiple_select_related_multiple_prefetch_related(self):
+        source = N(models.Source, persist_dependencies=False, id=1)
+        source2 = N(models.Source, persist_dependencies=False, id=2)
+        qsets = context_loader.get_querysets_for_context_hints({
+            source: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                    'select_related': ['fk'],
+                    'prefetch_related': ['fk_m2m'],
+                },
+            },
+            source2: {
+                'key2': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                    'select_related': ['fk2'],
+                },
+            }
+        })
+
+        # Create objects to query in order to test optimal number of queries
+        fk = G(test_models.TestFKModel)
+        fk2 = G(test_models.TestFKModel2)
+        o = G(test_models.TestModel, fk=fk, fk2=fk2)
+        m2ms = [G(test_models.TestFKModel), G(test_models.TestFKModel)]
+        o.fk_m2m.add(*m2ms)
+
+        with self.assertNumQueries(2):
+            v = qsets[test_models.TestModel].get(id=o.id)
+            self.assertEquals(v.fk, fk)
+            self.assertEquals(v.fk2, fk2)
+            self.assertEquals(set(v.fk_m2m.all()), set(m2ms))
