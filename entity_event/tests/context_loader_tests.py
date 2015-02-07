@@ -3,6 +3,7 @@ from django_dynamic_fixture import N
 
 from entity_event import context_loader
 from entity_event import models
+from entity_event.tests import models as test_models
 
 
 class TestGetContextHintsFromSource(SimpleTestCase):
@@ -79,3 +80,75 @@ class TestGetContextHintsFromSource(SimpleTestCase):
                 }
             },
         })
+
+
+class TestGetQuerysetsForContextHints(SimpleTestCase):
+    def test_no_context_hints(self):
+        qsets = context_loader.get_querysets_for_context_hints({})
+        self.assertEquals(qsets, {})
+
+    def test_one_context_hint_no_select_related(self):
+        source = N(models.Source, persist_dependencies=False, id=1)
+        qsets = context_loader.get_querysets_for_context_hints({
+            source: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                },
+            },
+        })
+        self.assertEquals(qsets, {
+            test_models.TestModel: test_models.TestModel.objects
+        })
+
+    def test_one_context_hint_w_select_related(self):
+        source = N(models.Source, persist_dependencies=False, id=1)
+        qsets = context_loader.get_querysets_for_context_hints({
+            source: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                    'select_related': ['fk'],
+                },
+            },
+        })
+        # Verify the raw sql to ensure select relateds will happen
+        raw_sql = (
+            'SELECT "tests_testmodel"."id", "tests_testmodel"."value", "tests_testmodel"."fk_id", '
+            '"tests_testmodel"."fk2_id", '
+            '"tests_testfkmodel"."id", "tests_testfkmodel"."value" FROM "tests_testmodel" INNER JOIN '
+            '"tests_testfkmodel" ON ( "tests_testmodel"."fk_id" = "tests_testfkmodel"."id" )'
+        )
+
+        self.assertEquals(str(qsets[test_models.TestModel].query), raw_sql)
+
+    def test_multiple_context_hints_w_multiple_select_related(self):
+        source = N(models.Source, persist_dependencies=False, id=1)
+        source2 = N(models.Source, persist_dependencies=False, id=2)
+        qsets = context_loader.get_querysets_for_context_hints({
+            source: {
+                'key': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                    'select_related': ['fk'],
+                },
+            },
+            source2: {
+                'key2': {
+                    'app_name': 'tests',
+                    'model_name': 'TestModel',
+                    'select_related': ['fk2'],
+                },
+            }
+        })
+        # Verify the raw sql to ensure select relateds will happen
+        raw_sql = (
+            'SELECT "tests_testmodel"."id", "tests_testmodel"."value", "tests_testmodel"."fk_id", '
+            '"tests_testmodel"."fk2_id", '
+            '"tests_testfkmodel"."id", "tests_testfkmodel"."value", '
+            '"tests_testfkmodel2"."id", "tests_testfkmodel2"."value" FROM "tests_testmodel" INNER JOIN '
+            '"tests_testfkmodel" ON ( "tests_testmodel"."fk_id" = "tests_testfkmodel"."id" ) '
+            'INNER JOIN "tests_testfkmodel2" ON ( "tests_testmodel"."fk2_id" = "tests_testfkmodel2"."id" )'
+        )
+
+        self.assertEquals(str(qsets[test_models.TestModel].query), raw_sql)
