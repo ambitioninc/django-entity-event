@@ -1,7 +1,6 @@
 from datetime import datetime
 
-from django.core.exceptions import ValidationError, ImproperlyConfigured
-from django.test import TestCase, SimpleTestCase
+from django.test import TestCase
 from django_dynamic_fixture import N, G
 from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
@@ -57,41 +56,6 @@ class EventManagerCreateEventTest(TestCase):
         Event.objects.create_event(context={'hi': 'hi'}, source=source, ignore_duplicates=True)
         e = Event.objects.create_event(context={'hi': 'hi'}, source=source, ignore_duplicates=True)
         self.assertIsNone(e)
-
-
-def basic_context_loader(context):
-    return {'hello': 'hello'}
-
-
-class SourceGetContextLoaderTest(SimpleTestCase):
-    def test_loads_context_loader(self):
-        template = Source(context_loader='entity_event.tests.models_tests.basic_context_loader')
-        loader_func = template.get_context_loader_function()
-        self.assertEqual(loader_func, basic_context_loader)
-
-    def test_invalid_context_loader(self):
-        template = Source(context_loader='entity_event.tests.models_tests.invalid_context_loader')
-        with self.assertRaises(ImproperlyConfigured):
-            template.get_context_loader_function()
-
-
-class SourceCleanTest(SimpleTestCase):
-    def test_invalid_context_path_does_not_validate(self):
-        with self.assertRaises(ValidationError):
-            Source(context_loader='invalid_path').clean()
-
-
-class EventGetContext(SimpleTestCase):
-    def test_without_context_loader(self):
-        event = N(
-            Event, context={'hi': 'hi'}, persist_dependencies=False, source=N(
-                Source, context_loader='entity_event.tests.models_tests.basic_context_loader',
-                persist_dependencies=False))
-        self.assertEqual(event.get_context(), {'hello': 'hello'})
-
-    def test_with_context_loader(self):
-        event = N(Event, context={'hi': 'hi'}, persist_dependencies=False)
-        self.assertEqual(event.get_context(), {'hi': 'hi'})
 
 
 class EventManagerTest(TestCase):

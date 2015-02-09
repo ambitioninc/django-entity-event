@@ -1,20 +1,19 @@
 from collections import defaultdict
 from datetime import datetime
 from operator import or_
+from six.moves import reduce
 
 from cached_property import cached_property
-from django.core.exceptions import ValidationError, ImproperlyConfigured
 from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
 from django.template import Context, Template
 from django.utils.encoding import python_2_unicode_compatible
-from django.utils.module_loading import import_by_path
-import jsonfield
-from six.moves import reduce
-
 from entity.models import Entity, EntityKind, EntityRelationship
+import jsonfield
+
+from entity_event import context_loader
 
 
 @python_2_unicode_compatible
@@ -556,8 +555,8 @@ class Medium(models.Model):
 class Source(models.Model):
     """A ``Source`` is an object in the database that represents where
     events come from. These objects only require a few fields,
-    ``name``, ``display_name`` ``description``, ``group`` and
-    optionally ``context_loader``. Source objects categorize events
+    ``name``, ``display_name`` ``description``, and ``group``.
+    Source objects categorize events
     based on where they came from, or what type of information they
     contain. Each source should be fairly fine grained, with broader
     categorizations possible through ``SourceGroup`` objects. Sources
@@ -578,11 +577,6 @@ class Source(models.Model):
     :param group: A SourceGroup object. A broad grouping of where the
         events originate.
 
-    :type context_loader: (optional) str
-    :param context_loader: A importable path to a function, which can
-        take a dictionary of context, and populate it with more
-        information from the database or other sources.
-
     Storing source objects in the database servers two purposes. The
     first is to provide an object that Subscriptions can reference,
     allowing different categories of events to be subscribed to over
@@ -602,49 +596,6 @@ class Source(models.Model):
     display_name = models.CharField(max_length=64)
     description = models.TextField()
     group = models.ForeignKey('SourceGroup')
-    # An optional function path that loads the context of an event and performs
-    # any additional application-specific context fetching before rendering
-    context_loader = models.CharField(max_length=256, default='', blank=True)
-
-    def get_context_loader_function(self):
-        """Returns an imported, callable context loader function.
-        """
-        return import_by_path(self.context_loader)
-
-    def get_context(self, context):
-        """Gets the context for this source by loading it through the source's
-        context loader (if it has one).
-
-        :type context: Dict
-        :param context: A dictionary of context for an event from this
-            source.
-
-        :rtype: Dict
-        :returns: The context provided, with any additional context
-            loaded by the context loader function.
-        """
-        if self.context_loader:
-            return self.get_context_loader_function()(context)
-        else:
-            return context
-
-    def clean(self):
-        """Validation for the model.
-
-        Check that:
-        - the context loader provided maps to an actual loadable function.
-        """
-        if self.context_loader:
-            try:
-                self.get_context_loader_function()
-            except ImproperlyConfigured:
-                raise ValidationError('Must provide a loadable context loader')
-
-    def save(self, *args, **kwargs):
-        """Save the instance to the database after validation.
-        """
-        self.clean()
-        return super(Source, self).save(*args, **kwargs)
 
     def __str__(self):
         """Readable representation of ``Source`` objects."""
@@ -853,6 +804,13 @@ class EventQuerySet(QuerySet):
             EventSeen(event=event, medium=medium) for event in self
         ])
 
+    def load_contexts(self, medium):
+        """
+        Loads context data into the event ``context`` variable. This method
+        destroys the queryset and returns a list of events.
+        """
+        return context_loader.load_contexts(self, [medium])
+
 
 class EventManager(models.Manager):
     """A custom Manager for Events.
@@ -872,6 +830,13 @@ class EventManager(models.Manager):
         ``events_targets``.
         """
         return self.get_queryset().mark_seen(medium)
+
+    def load_contexts(self, medium):
+        """
+        Loads context data into the event ``context`` variable. This method
+        destroys the queryset and returns a list of events.
+        """
+        return self.get_queryset().load_context(medium)
 
     @transaction.atomic
     def create_event(self, actors=None, ignore_duplicates=False, **kwargs):
@@ -893,8 +858,7 @@ class EventManager(models.Manager):
             information about the event, to be serialized into
             JSON. It is possible to load additional context
             dynamically  when events are fetched. See the
-            documentation on the ``context_loader`` field in
-            ``Source``.
+            documentation on the ``ContextRenderer`` model.
 
         :type uuid: str
         :param uuid: A unique string for the event. Requiring a
@@ -974,20 +938,6 @@ class Event(models.Model):
     uuid = models.CharField(max_length=128, unique=True)
 
     objects = EventManager()
-
-    def get_context(self):
-        """Retrieves and populates the context for this event.
-
-        At the minimum, whatever context was stored in the event is
-        returned. If the source of the event provides a
-        ``context_loader``, any additional context created by that
-        function will be included.
-
-        :rtype: Dict
-        :returns: A dictionary of the event's context, with any
-            additional context loaded.
-        """
-        return self.source.get_context(self.context)
 
     def __str__(self):
         """Readable representation of ``Event`` objects."""

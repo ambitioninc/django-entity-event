@@ -6,8 +6,6 @@ from collections import defaultdict
 from django.db.models.loading import get_model
 from manager_utils import id_dict
 
-from entity_event import models
-
 
 def get_context_hints_per_source(context_renderers):
     """
@@ -148,12 +146,15 @@ def load_contexts(events, mediums):
     """
     Given a list of events and mediums, load the context model data into the contexts of the events.
     """
+    context_renderer_model = get_model('entity_event', 'ContextRenderer')
     sources = {event.source for event in events}
     render_groups = {medium.render_group for medium in mediums}
-    context_renderers = models.ContextRenderer.objects.filter(source__in=sources, render_group__in=render_groups)
+    context_renderers = context_renderer_model.objects.filter(source__in=sources, render_group__in=render_groups)
 
     context_hints_per_source = get_context_hints_per_source(context_renderers)
     model_querysets = get_querysets_for_context_hints(context_hints_per_source)
     model_ids_to_fetch = get_model_ids_to_fetch(events, context_hints_per_source)
     model_data = fetch_model_data(model_querysets, model_ids_to_fetch)
     load_fetched_objects_into_contexts(events, model_data, context_hints_per_source)
+
+    return events
