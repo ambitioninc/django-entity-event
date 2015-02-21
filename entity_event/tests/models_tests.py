@@ -1,11 +1,11 @@
 from datetime import datetime
 
 from django.template import Template
-from django.test import TestCase
+from django.test import TestCase, SimpleTestCase
 from django_dynamic_fixture import N, G
 from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
-from mock import patch
+from mock import patch, call
 from six import text_type
 
 from entity_event.models import (
@@ -364,7 +364,7 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
         self.assertEqual(indiv_qs.count(), 1)
 
 
-class ContextRendererRenderTextOrHtmlTemplateTest(TestCase):
+class ContextRendererRenderTextOrHtmlTemplateTest(SimpleTestCase):
     @patch('entity_event.models.render_to_string', spec_set=True)
     def test_w_html_template_path(self, mock_render_to_string):
         cr = N(ContextRenderer, html_template_path='html_path', persist_dependencies=False)
@@ -408,6 +408,17 @@ class ContextRendererRenderTextOrHtmlTemplateTest(TestCase):
         self.assertEqual(cr.render_text_or_html_template(c, is_text=False), '')
 
 
+class ContextRendererRenderContextToTextHtmlTemplates(SimpleTestCase):
+    @patch.object(ContextRenderer, 'render_text_or_html_template', spec_set=True)
+    def test_render_context_to_text_html_templates(self, mock_render_text_or_html_template):
+        c = {'context': 'context'}
+        r = ContextRenderer().render_context_to_text_html_templates(c)
+        self.assertEqual(
+            r, (mock_render_text_or_html_template.return_value, mock_render_text_or_html_template.return_value))
+        self.assertEqual(
+            mock_render_text_or_html_template.call_args_list, [call(c, is_text=True), call(c, is_text=False)])
+
+
 class UnseenEventIdsTest(TestCase):
     def test_filters_seen(self):
         m = G(Medium)
@@ -430,12 +441,7 @@ class UnseenEventIdsTest(TestCase):
         self.assertEqual(set(unseen_ids), set([e1.id, e3.id, e4.id]))
 
 
-# Note: The following freeze_time a few more minutes than what we
-# want, in order to work around a strange off by a few seconds bug in
-# freezegun. I'm not sure what other way to fix it. Since we're only
-# testing unicode representations here, it isn't terribly important.
-@freeze_time(datetime(2014, 1, 1, 0, 10))
-class UnicodeTest(TestCase):
+class UnicodeTest(SimpleTestCase):
     def setUp(self):
         self.render_group = N(RenderGroup, display_name='Test Render Group', persist_dependencies=False)
         self.context_renderer = N(ContextRenderer, name='Test Context Renderer', persist_dependencies=False)
