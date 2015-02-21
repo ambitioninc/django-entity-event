@@ -4,6 +4,7 @@ from django.test import TestCase
 from django_dynamic_fixture import N, G
 from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
+from mock import patch
 from six import text_type
 
 from entity_event.models import (
@@ -58,13 +59,22 @@ class EventManagerCreateEventTest(TestCase):
         self.assertIsNone(e)
 
 
-class EventManagerTest(TestCase):
+class EventManagerQuerySetTest(TestCase):
     def test_mark_seen(self):
         event = G(Event, context={})
         medium = G(Medium)
         Event.objects.mark_seen(medium)
         self.assertEqual(EventSeen.objects.count(), 1)
         self.assertTrue(EventSeen.objects.filter(event=event, medium=medium).exists())
+
+    @patch('entity_event.context_loader.load_contexts', spec_set=True)
+    def test_load_contexts(self, mock_load_contexts):
+        e = G(Event, context={})
+        medium = G(Medium)
+        Event.objects.load_contexts(medium)
+        self.assertEquals(mock_load_contexts.call_count, 1)
+        self.assertEquals(list(mock_load_contexts.call_args_list[0][0][0]), [e])
+        self.assertEquals(mock_load_contexts.call_args_list[0][0][1], [medium])
 
 
 class MediumEventsInterfacesTest(TestCase):

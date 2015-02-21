@@ -13,8 +13,6 @@ from django.utils.encoding import python_2_unicode_compatible
 from entity.models import Entity, EntityKind, EntityRelationship
 import jsonfield
 
-from entity_event import context_loader
-
 
 @python_2_unicode_compatible
 class Medium(models.Model):
@@ -809,6 +807,7 @@ class EventQuerySet(QuerySet):
         Loads context data into the event ``context`` variable. This method
         destroys the queryset and returns a list of events.
         """
+        from entity_event import context_loader
         return context_loader.load_contexts(self, [medium])
 
 
@@ -836,7 +835,7 @@ class EventManager(models.Manager):
         Loads context data into the event ``context`` variable. This method
         destroys the queryset and returns a list of events.
         """
-        return self.get_queryset().load_context(medium)
+        return self.get_queryset().load_contexts(medium)
 
     @transaction.atomic
     def create_event(self, actors=None, ignore_duplicates=False, **kwargs):
@@ -1075,7 +1074,7 @@ class ContextRenderer(models.Model):
     context_hints = jsonfield.JSONField(null=True, default=None)
 
     def __str__(self):
-        return self.template_name
+        return self.name
 
     def render_text_or_html_template(self, context, is_text=True):
         """
