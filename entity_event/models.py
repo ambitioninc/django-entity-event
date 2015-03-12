@@ -938,6 +938,25 @@ class Event(models.Model):
 
     objects = EventManager()
 
+    def __init__(self, *args, **kwargs):
+        super(Event, self).__init__(*args, **kwargs)
+        # A dictionary that is populated with renderers after the contexts have been
+        # properly loaded. When renderers are available, the 'render' method may be
+        # called with a medium and optional observer
+        self._context_renderers = {}
+
+    def render(self, medium, observing_entity=None):
+        """
+        Returns the rendered event as a tuple of text and html content. This information
+        is filled out with respect to which medium is rendering the event, what context
+        renderers are available with the prefetched context, and which optional entity
+        may be observing the rendered event.
+        """
+        if medium not in self._context_renderers:
+            raise RuntimeError('Context and renderer for medium {0} has not been fetched'.format(medium))
+        else:
+            return self._context_renderers[medium].render_context_to_text_html_templates(self.context)
+
     def __str__(self):
         """Readable representation of ``Event`` objects."""
         s = '{source} event at {time}'
@@ -1072,6 +1091,9 @@ class ContextRenderer(models.Model):
 
     # Containts hints on how to fetch the context from the database
     context_hints = jsonfield.JSONField(null=True, default=None)
+
+    class Meta:
+        unique_together = ('source', 'render_group')
 
     def __str__(self):
         return self.name

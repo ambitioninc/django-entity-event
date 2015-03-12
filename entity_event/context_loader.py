@@ -144,6 +144,25 @@ def load_fetched_objects_into_contexts(events, model_data, context_hints_per_sou
                     d[context_key] = model_data[model].get(value)
 
 
+def load_renderers_into_events(events, mediums, context_renderers):
+    """
+    Given the events and the context renderers, load the renderers into the event objects
+    so that they may be able to call the 'render' method later on.
+    """
+    mediums_per_render_group = defaultdict(list)
+    for medium in mediums:
+        mediums_per_render_group[mediums.render_group_id].append(medium)
+
+    medium_renderers_per_source = defaultdict(dict)
+    for renderer in context_renderers:
+        for medium in mediums_per_render_group:
+            medium_renderers_per_source[renderer.source_id][medium] = renderer
+
+    for event in events:
+        for medium, renderer in medium_renderers_per_source[event.source_id].items():
+            event._context_renderers[medium] = renderer
+
+
 def load_contexts_and_renderers(events, mediums):
     """
     Given a list of events and mediums, load the context model data into the contexts of the events.
@@ -157,5 +176,6 @@ def load_contexts_and_renderers(events, mediums):
     model_ids_to_fetch = get_model_ids_to_fetch(events, context_hints_per_source)
     model_data = fetch_model_data(model_querysets, model_ids_to_fetch)
     load_fetched_objects_into_contexts(events, model_data, context_hints_per_source)
+    load_renderers_into_events(events, mediums, context_renderers)
 
     return events
