@@ -69,14 +69,14 @@ class EventManagerQuerySetTest(TestCase):
         self.assertEqual(EventSeen.objects.count(), 1)
         self.assertTrue(EventSeen.objects.filter(event=event, medium=medium).exists())
 
-    @patch('entity_event.context_loader.load_contexts', spec_set=True)
-    def test_load_contexts(self, mock_load_contexts):
+    @patch('entity_event.context_loader.load_contexts_and_renderers', spec_set=True)
+    def test_load_contexts_and_renderers(self, mock_load_contexts_and_renderers):
         e = G(Event, context={})
         medium = G(Medium)
-        Event.objects.load_contexts(medium)
-        self.assertEquals(mock_load_contexts.call_count, 1)
-        self.assertEquals(list(mock_load_contexts.call_args_list[0][0][0]), [e])
-        self.assertEquals(mock_load_contexts.call_args_list[0][0][1], [medium])
+        Event.objects.load_contexts_and_renderers(medium)
+        self.assertEquals(mock_load_contexts_and_renderers.call_count, 1)
+        self.assertEquals(list(mock_load_contexts_and_renderers.call_args_list[0][0][0]), [e])
+        self.assertEquals(mock_load_contexts_and_renderers.call_args_list[0][0][1], [medium])
 
 
 class MediumEventsInterfacesTest(TestCase):

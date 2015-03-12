@@ -429,11 +429,11 @@ class LoadContextsTest(TestCase):
     Integration tests for loading contexts into events.
     """
     def test_none(self):
-        context_loader.load_contexts([], [])
+        context_loader.load_contexts_and_renderers([], [])
 
     def test_no_mediums(self):
         e = G(models.Event, context={})
-        context_loader.load_contexts([e], [])
+        context_loader.load_contexts_and_renderers([e], [])
         self.assertEquals(e.context, {})
 
     def test_one_render_target_one_event(self):
@@ -449,7 +449,7 @@ class LoadContextsTest(TestCase):
             }
         })
 
-        context_loader.load_contexts([e], [medium])
+        context_loader.load_contexts_and_renderers([e], [medium])
         self.assertEquals(e.context, {'key': m1})
 
     def test_multiple_render_targets_multiple_events(self):
@@ -487,7 +487,7 @@ class LoadContextsTest(TestCase):
         e3 = G(models.Event, context={'key2': test_fk_m1.id, 'key': test_m1.id}, source=s2)
         e4 = G(models.Event, context={'key2': test_fk_m2.id}, source=s2)
 
-        context_loader.load_contexts([e1, e2, e3, e4], [medium1, medium2])
+        context_loader.load_contexts_and_renderers([e1, e2, e3, e4], [medium1, medium2])
         self.assertEquals(e1.context, {'key': test_m1, 'key2': 'haha'})
         self.assertEquals(e2.context, {'key': [test_m2, test_m3]})
         self.assertEquals(e3.context, {'key2': test_fk_m1, 'key': test_m1})
@@ -537,7 +537,7 @@ class LoadContextsTest(TestCase):
         e4 = G(models.Event, context={'key2': test_fk_m2.id}, source=s2)
 
         with self.assertNumQueries(6):
-            context_loader.load_contexts([e1, e2, e3, e4], [medium1, medium2])
+            context_loader.load_contexts_and_renderers([e1, e2, e3, e4], [medium1, medium2])
             self.assertEquals(e1.context['key'].fk, fk1)
             self.assertEquals(e2.context['key'][0].fk, fk1)
             self.assertEquals(e1.context['key'].fk2, fk2)

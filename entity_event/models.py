@@ -802,13 +802,13 @@ class EventQuerySet(QuerySet):
             EventSeen(event=event, medium=medium) for event in self
         ])
 
-    def load_contexts(self, medium):
+    def load_contexts_and_renderers(self, medium):
         """
         Loads context data into the event ``context`` variable. This method
         destroys the queryset and returns a list of events.
         """
         from entity_event import context_loader
-        return context_loader.load_contexts(self, [medium])
+        return context_loader.load_contexts_and_renderers(self, [medium])
 
 
 class EventManager(models.Manager):
@@ -830,12 +830,12 @@ class EventManager(models.Manager):
         """
         return self.get_queryset().mark_seen(medium)
 
-    def load_contexts(self, medium):
+    def load_contexts_and_renderers(self, medium):
         """
         Loads context data into the event ``context`` variable. This method
         destroys the queryset and returns a list of events.
         """
-        return self.get_queryset().load_contexts(medium)
+        return self.get_queryset().load_contexts_and_renderers(medium)
 
     @transaction.atomic
     def create_event(self, actors=None, ignore_duplicates=False, **kwargs):

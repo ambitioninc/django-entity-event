@@ -144,7 +144,7 @@ def load_fetched_objects_into_contexts(events, model_data, context_hints_per_sou
                     d[context_key] = model_data[model].get(value)
 
 
-def load_contexts(events, mediums):
+def load_contexts_and_renderers(events, mediums):
     """
     Given a list of events and mediums, load the context model data into the contexts of the events.
     """
