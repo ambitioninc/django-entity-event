@@ -151,11 +151,11 @@ def load_renderers_into_events(events, mediums, context_renderers):
     """
     mediums_per_render_group = defaultdict(list)
     for medium in mediums:
-        mediums_per_render_group[mediums.render_group_id].append(medium)
+        mediums_per_render_group[medium.render_group_id].append(medium)
 
     medium_renderers_per_source = defaultdict(dict)
     for renderer in context_renderers:
-        for medium in mediums_per_render_group:
+        for medium in mediums_per_render_group[renderer.render_group_id]:
             medium_renderers_per_source[renderer.source_id][medium] = renderer
 
     for event in events:

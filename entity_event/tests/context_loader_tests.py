@@ -424,9 +424,45 @@ class LoadFetchedObjectsIntoContextsTest(SimpleTestCase):
         self.assertEquals(e.context, {'key': [m1, m2]})
 
 
-class LoadContextsTest(TestCase):
+class TestLoadRenderersIntoEvents(SimpleTestCase):
+    def test_no_mediums_or_renderers(self):
+        events = [N(models.Event, context={}, persist_dependencies=False)]
+        context_loader.load_renderers_into_events(events, [], [])
+        self.assertEquals(events[0]._context_renderers, {})
+
+    def test_mediums_and_no_renderers(self):
+        events = [N(models.Event, context={}, persist_dependencies=False)]
+        mediums = [N(models.Medium, persist_dependencies=False)]
+        context_loader.load_renderers_into_events(events, mediums, [])
+        self.assertEquals(events[0]._context_renderers, {})
+
+    def test_mediums_w_renderers(self):
+        s1 = N(models.Source, id=1, persist_dependencies=False)
+        s2 = N(models.Source, id=2, persist_dependencies=False)
+        e1 = N(models.Event, context={}, source=s1, persist_dependencies=False)
+        e2 = N(models.Event, context={}, source=s2, persist_dependencies=False)
+        rg1 = N(models.RenderGroup, id=1, persist_dependencies=False)
+        rg2 = N(models.RenderGroup, id=2, persist_dependencies=False)
+        m1 = N(models.Medium, id=1, render_group=rg1, persist_dependencies=False)
+        m2 = N(models.Medium, id=2, render_group=rg2, persist_dependencies=False)
+        cr1 = N(models.ContextRenderer, source=s1, render_group=rg1, id=1, persist_dependencies=False)
+        cr2 = N(models.ContextRenderer, source=s2, render_group=rg1, id=2, persist_dependencies=False)
+        cr3 = N(models.ContextRenderer, source=s1, render_group=rg2, id=3, persist_dependencies=False)
+
+        context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2, cr3])
+
+        self.assertEquals(e1._context_renderers, {
+            m1: cr1,
+            m2: cr3,
+        })
+        self.assertEquals(e2._context_renderers, {
+            m1: cr2
+        })
+
+
+class LoadContextsAndRenderersTest(TestCase):
     """
-    Integration tests for loading contexts into events.
+    Integration tests for loading contexts and renderers into events.
     """
     def test_none(self):
         context_loader.load_contexts_and_renderers([], [])
@@ -465,13 +501,13 @@ class LoadContextsTest(TestCase):
         medium1 = G(models.Medium, source=s1, render_group=rg1)
         medium2 = G(models.Medium, source=s2, render_group=rg2)
 
-        G(models.ContextRenderer, render_group=rg1, source=s1, context_hints={
+        cr1 = G(models.ContextRenderer, render_group=rg1, source=s1, context_hints={
             'key': {
                 'model_name': 'TestModel',
                 'app_name': 'tests',
             }
         })
-        G(models.ContextRenderer, render_group=rg2, source=s2, context_hints={
+        cr2 = G(models.ContextRenderer, render_group=rg2, source=s2, context_hints={
             'key': {
                 'model_name': 'TestModel',
                 'app_name': 'tests',
@@ -492,6 +528,20 @@ class LoadContextsTest(TestCase):
         self.assertEquals(e2.context, {'key': [test_m2, test_m3]})
         self.assertEquals(e3.context, {'key2': test_fk_m1, 'key': test_m1})
         self.assertEquals(e4.context, {'key2': test_fk_m2})
+
+        # Verify context renderers are put into the events properly
+        self.assertEquals(e1._context_renderers, {
+            medium1: cr1,
+        })
+        self.assertEquals(e2._context_renderers, {
+            medium1: cr1,
+        })
+        self.assertEquals(e3._context_renderers, {
+            medium2: cr2,
+        })
+        self.assertEquals(e4._context_renderers, {
+            medium2: cr2,
+        })
 
     def test_optimal_queries(self):
         fk1 = G(test_models.TestFKModel)

@@ -12,6 +12,53 @@ from entity_event.models import (
     Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen,
     RenderGroup, ContextRenderer, _unseen_event_ids
 )
+from entity_event.tests.models import TestFKModel
+
+
+class EventRenderTest(TestCase):
+    """
+    Does an entire integration test for rendering events relative to mediums.
+    """
+    def test_one_context_renderer_one_medium(self):
+        rg = G(RenderGroup)
+        s = G(Source)
+        G(
+            ContextRenderer, source=s, render_group=rg, text_template_path='test_template.txt',
+            html_template_path='test_template.html', context_hints={
+                'fk_model': {
+                    'app_name': 'tests',
+                    'model_name': 'TestFKModel',
+                }
+            })
+        m = G(Medium, render_group=rg)
+
+        fkm = G(TestFKModel, value=100)
+        G(Event, source=s, context={'fk_model': fkm.id})
+
+        events = Event.objects.all().load_contexts_and_renderers(m)
+        txt, html = events[0].render(m)
+
+        self.assertEquals(txt, 'Test text template with value 100')
+        self.assertEquals(html, 'Test html template with value 100')
+
+    def test_wo_fetching_contexts(self):
+        rg = G(RenderGroup)
+        s = G(Source)
+        G(
+            ContextRenderer, source=s, render_group=rg, text_template_path='test_template.txt',
+            html_template_path='test_template.html', context_hints={
+                'fk_model': {
+                    'app_name': 'tests',
+                    'model_name': 'TestFKModel',
+                }
+            })
+        m = G(Medium, render_group=rg)
+
+        fkm = G(TestFKModel, value=100)
+        e = G(Event, source=s, context={'fk_model': fkm.id})
+
+        with self.assertRaises(RuntimeError):
+            e.render(m)
 
 
 class EventManagerCreateEventTest(TestCase):

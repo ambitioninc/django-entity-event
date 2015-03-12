@@ -953,7 +953,7 @@ class Event(models.Model):
         may be observing the rendered event.
         """
         if medium not in self._context_renderers:
-            raise RuntimeError('Context and renderer for medium {0} has not been fetched'.format(medium))
+            raise RuntimeError('Context and renderer for medium {0} has not or cannot been fetched'.format(medium))
         else:
             return self._context_renderers[medium].render_context_to_text_html_templates(self.context)
 
