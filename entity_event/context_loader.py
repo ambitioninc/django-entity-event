@@ -3,6 +3,7 @@ A module for loading contexts using context hints.
 """
 from collections import defaultdict
 
+from django.db.models import Q
 from django.db.models.loading import get_model
 from manager_utils import id_dict
 
@@ -23,11 +24,12 @@ def get_context_hints_per_source(context_renderers):
         'prefetch_related': set(),
     }))
     for cr in context_renderers:
-        for key, hints in cr.context_hints.items():
-            context_hints_per_source[cr.source][key]['app_name'] = hints['app_name']
-            context_hints_per_source[cr.source][key]['model_name'] = hints['model_name']
-            context_hints_per_source[cr.source][key]['select_related'].update(hints.get('select_related', []))
-            context_hints_per_source[cr.source][key]['prefetch_related'].update(hints.get('prefetch_related', []))
+        for key, hints in cr.context_hints.items() if cr.context_hints else []:
+            for source in cr.get_sources():
+                context_hints_per_source[source][key]['app_name'] = hints['app_name']
+                context_hints_per_source[source][key]['model_name'] = hints['model_name']
+                context_hints_per_source[source][key]['select_related'].update(hints.get('select_related', []))
+                context_hints_per_source[source][key]['prefetch_related'].update(hints.get('prefetch_related', []))
 
     return context_hints_per_source
 
@@ -156,10 +158,12 @@ def load_renderers_into_events(events, mediums, context_renderers):
     medium_renderers_per_source = defaultdict(dict)
     for renderer in context_renderers:
         for medium in mediums_per_render_group[renderer.render_group_id]:
-            medium_renderers_per_source[renderer.source_id][medium] = renderer
+            for source in renderer.get_sources():
+                medium_renderers_per_source[source.id][medium] = renderer
 
     for event in events:
         for medium, renderer in medium_renderers_per_source[event.source_id].items():
+            print 'putting renderer in event', medium, renderer
             event._context_renderers[medium] = renderer
 
 
@@ -169,7 +173,11 @@ def load_contexts_and_renderers(events, mediums):
     """
     sources = {event.source for event in events}
     render_groups = {medium.render_group for medium in mediums}
-    context_renderers = ContextRenderer.objects.filter(source__in=sources, render_group__in=render_groups)
+    context_renderers = ContextRenderer.objects.filter(
+        Q(source__in=sources, render_group__in=render_groups) |
+        Q(source_group_id__in=[s.group_id for s in sources], render_group__in=render_groups)).select_related(
+            'source').prefetch_related('source_group__source_set')
+    print 'context_renderers', context_renderers, sources, render_groups
 
     context_hints_per_source = get_context_hints_per_source(context_renderers)
     model_querysets = get_querysets_for_context_hints(context_hints_per_source)

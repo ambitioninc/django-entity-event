@@ -8,6 +8,14 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        # Adding field 'ContextRenderer.source_group'
+        db.add_column(u'entity_event_contextrenderer', 'source_group',
+                      self.gf('django.db.models.fields.related.ForeignKey')(to=orm['entity_event.SourceGroup'], null=True),
+                      keep_default=False)
+
+
+        # Changing field 'ContextRenderer.source'
+        db.alter_column(u'entity_event_contextrenderer', 'source_id', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['entity_event.Source'], null=True))
         # Adding unique constraint on 'ContextRenderer', fields ['source', 'render_group']
         db.create_unique(u'entity_event_contextrenderer', ['source_id', 'render_group_id'])
 
@@ -16,6 +24,12 @@ class Migration(SchemaMigration):
         # Removing unique constraint on 'ContextRenderer', fields ['source', 'render_group']
         db.delete_unique(u'entity_event_contextrenderer', ['source_id', 'render_group_id'])
 
+        # Deleting field 'ContextRenderer.source_group'
+        db.delete_column(u'entity_event_contextrenderer', 'source_group_id')
+
+
+        # Changing field 'ContextRenderer.source'
+        db.alter_column(u'entity_event_contextrenderer', 'source_id', self.gf('django.db.models.fields.related.ForeignKey')(default=0, to=orm['entity_event.Source']))
 
     models = {
         u'contenttypes.contenttype': {
@@ -49,7 +63,8 @@ class Migration(SchemaMigration):
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '64'}),
             'render_group': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.RenderGroup']"}),
-            'source': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.Source']"}),
+            'source': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.Source']", 'null': 'True'}),
+            'source_group': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.SourceGroup']", 'null': 'True'}),
             'text_template': ('django.db.models.fields.TextField', [], {'default': "''"}),
             'text_template_path': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '256'})
         },

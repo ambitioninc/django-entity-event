@@ -1083,8 +1083,9 @@ class ContextRenderer(models.Model):
     text_template = models.TextField(default='')
     html_template = models.TextField(default='')
 
-    # The source of the event
-    source = models.ForeignKey(Source)
+    # The source or source group of the event. It can only be one or the other
+    source = models.ForeignKey(Source, null=True)
+    source_group = models.ForeignKey(SourceGroup, null=True)
 
     # The render group. Used to associated it with a medium
     render_group = models.ForeignKey(RenderGroup)
@@ -1094,6 +1095,9 @@ class ContextRenderer(models.Model):
 
     class Meta:
         unique_together = ('source', 'render_group')
+
+    def get_sources(self):
+        return [self.source] if self.source_id else self.source_group.source_set.all()
 
     def __str__(self):
         return self.name
