@@ -7,7 +7,7 @@ env:
   global:
     - DB=postgres
   matrix:
-    - DJANGO=1.6.5
+    - DJANGO=1.6.11
 install:
   - pip install -q coveralls coverage flake8 Django==$DJANGO
   - pip install -r requirements/docs.txt
