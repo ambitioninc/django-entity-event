@@ -1,5 +1,6 @@
 from django.test import SimpleTestCase, TestCase
 from django_dynamic_fixture import N, G
+from mock import patch
 
 from entity_event import context_loader
 from entity_event import models
@@ -11,8 +12,10 @@ class TestGetContextHintsFromSource(SimpleTestCase):
         res = context_loader.get_context_hints_per_source([])
         self.assertEquals(res, {})
 
-    def test_one_context_renderer(self):
+    @patch.object(models.ContextRenderer, 'get_sources', spec_set=True)
+    def test_one_context_renderer(self, mock_get_sources):
         source = N(models.Source, persist_dependencies=False)
+        mock_get_sources.return_value = [source]
         res = context_loader.get_context_hints_per_source([
             N(models.ContextRenderer, source=source, context_hints={
                 'key': {

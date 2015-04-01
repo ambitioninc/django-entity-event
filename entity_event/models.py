@@ -548,6 +548,16 @@ class Medium(models.Model):
             Q(id__in=entities) | Q(id__in=sub_entities))
         return followers_of
 
+    def render(self, events):
+        """
+        Renders a list of events for this medium. The events first have their contexts loaded.
+        Afterwards, the rendered events are returned as a dictionary keyed on the event itself.
+        The key points to a tuple of (txt, html) renderings of the event.
+        """
+        from entity_event import context_loader
+        context_loader.load_contexts_and_renderers(events, [self])
+        return {e: e.render(self) for e in events}
+
 
 @python_2_unicode_compatible
 class Source(models.Model):
@@ -1128,6 +1138,6 @@ class ContextRenderer(models.Model):
         """
         # Process text template:
         return (
-            self.render_text_or_html_template(context, is_text=True),
-            self.render_text_or_html_template(context, is_text=False),
+            self.render_text_or_html_template(context, is_text=True).strip(),
+            self.render_text_or_html_template(context, is_text=False).strip(),
         )

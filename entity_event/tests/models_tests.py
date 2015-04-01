@@ -5,7 +5,7 @@ from django.test import TestCase, SimpleTestCase
 from django_dynamic_fixture import N, G
 from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
-from mock import patch, call
+from mock import patch, call, Mock
 from six import text_type
 
 from entity_event.models import (
@@ -217,6 +217,25 @@ class MediumEventsInterfacesTest(TestCase):
     def test_entity_targets_only_following(self):
         events_targets = self.medium_z.events_targets(entity_kind=self.person_kind)
         self.assertEqual(len(events_targets[0][1]), 1)
+
+
+class MediumRenderTest(SimpleTestCase):
+    @patch('entity_event.context_loader.load_contexts_and_renderers', spec_set=True)
+    def test_render(self, mock_load_contexts_and_renderers):
+        medium = N(Medium, persist_dependencies=False)
+        e1 = Mock(render=Mock(return_value=('e1.txt', 'e1.html')))
+        e2 = Mock(render=Mock(return_value=('e2.txt', 'e2.html')))
+
+        events = [e1, e2]
+        res = medium.render(events)
+
+        mock_load_contexts_and_renderers.assert_called_once_with(events, [medium])
+        self.assertEquals(res, {
+            e1: ('e1.txt', 'e1.html'),
+            e2: ('e2.txt', 'e2.html'),
+        })
+        e1.render.assert_called_once_with(medium)
+        e2.render.assert_called_once_with(medium)
 
 
 class MediumSubsetSubscriptionsTest(TestCase):
@@ -461,7 +480,10 @@ class ContextRendererRenderContextToTextHtmlTemplates(SimpleTestCase):
         c = {'context': 'context'}
         r = ContextRenderer().render_context_to_text_html_templates(c)
         self.assertEqual(
-            r, (mock_render_text_or_html_template.return_value, mock_render_text_or_html_template.return_value))
+            r, (
+                mock_render_text_or_html_template.return_value.strip(),
+                mock_render_text_or_html_template.return_value.strip()
+            ))
         self.assertEqual(
             mock_render_text_or_html_template.call_args_list, [call(c, is_text=True), call(c, is_text=False)])
 

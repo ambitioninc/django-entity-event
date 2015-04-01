@@ -163,7 +163,6 @@ def load_renderers_into_events(events, mediums, context_renderers):
 
     for event in events:
         for medium, renderer in medium_renderers_per_source[event.source_id].items():
-            print 'putting renderer in event', medium, renderer
             event._context_renderers[medium] = renderer
 
 
@@ -177,7 +176,6 @@ def load_contexts_and_renderers(events, mediums):
         Q(source__in=sources, render_group__in=render_groups) |
         Q(source_group_id__in=[s.group_id for s in sources], render_group__in=render_groups)).select_related(
             'source').prefetch_related('source_group__source_set')
-    print 'context_renderers', context_renderers, sources, render_groups
 
     context_hints_per_source = get_context_hints_per_source(context_renderers)
     model_querysets = get_querysets_for_context_hints(context_hints_per_source)
