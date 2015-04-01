@@ -13,74 +13,109 @@ This guide will cover the following advanced use cases:
   :py:class:`~entity_event.models.Medium`.
 
 
-Custom Context Loaders
-----------------------
+Rendering Events
+----------------
 
-When events are created, it is up to the creator of the event to
-decide what information gets stored in the event's ``context``
-field. In many cases it makes sense to persist all of the data
-necessary to display the event to a user.
+Django Entity Event comes complete with a rendering system for events. This is accomplished
+by the setup of two different models:
 
-In some cases, however the ``context`` of the event can be very large,
-and storing all of the information would mean duplicating a large
-amount of data that exists elsewhere in your database. It's desirable
-to have all this data available in the ``context`` field, but it isn't
-desirable to repeatedly duplicate large amounts of information.
+1. :py:class:`~entity_event.models.RenderingStyle`: Defines a style of rendering.
+2. :py:class:`~entity_event.models.ContextRenderer`: Defines the templates used
+   for rendering, which rendering style it is, which source or source group it renders,
+   and hints for fetching model PKs that are in event contexts.
 
-If the creator of the events can guarantee that some of the
-information about the event will always be available in the database,
-or computable from some subset of the data that could be stored in the
-context, they can use the ``Source.context_loader`` field to provide a
-path to an importable function to dynamically load the context when
-the events are fetched.
+When these models are in place, :py:class:`~entity_event.models.Medium` models can be configured
+to point to a ``rendering_style`` of their choice. Events that have sources or source groups that
+match those configured in associated :py:class:`~entity_event.models.ContextRenderer` models
+can then be rendered using the ``render`` method on the medium.
 
-If for example, we are creating events about photo tags, and we don't
-want to persist a full path to the photo, we can simply store a ``id``
-for the photo, and then use a context loader to load it
-dynamically. The function we would write to load the context would
-look something like
+The configuration and rendering is best explained using a complete example. First, let's
+imagine that we are storing events that have contexts with information about Django User models.
+These events have a source called ``user_logged_in`` and track every time a user logs in. An
+example context is as follows:
 
 .. code-block:: python
 
-    # In module apps.photos.loaders
+    {
+        'user': 1, # The PK of the Django User model
+        'login_time': 'Jan 10, 2014', # The time the user logged in
+    }
 
-    def load_photo_context(context):
-        photo = Photo.objects.get(id=context['photo_id'])
-        context['photo_path'] = photo.path
-        return context
-
-Then, when defining our source for this type of event we would include
-a path to this function in the ``context_loader`` field.
+Now let's say we have a Django template, ``user_logged_in.html`` that looks like the following:
 
 .. code-block:: python
 
-    from entity_event import Source
+    User {{ user.username }} logged in at {{ login_time }}
 
-    photo_tag_source = Source.objects.create(
-        name="photo-tag",
-        display_name="Photo Tag",
-        description="You are tagged in a photo",
-        group=photo_group,
-        context_loader='apps.photos.loaders.load_photo_path'
+In order to render the event with this template, we first set up a rendering style. This rendering
+style is pretty short and could probably be displayed in many places that want to display short
+messages (like a notification bar). So, we can make a ``short`` rendering style as followings:
+
+.. code-block:: python
+
+    short_rendering_style = RenderingStyle.objects.create(
+        name='short',
+        display_name='Short Rendering Style')
+
+Now that we have our rendering style, we need to create a context renderer that has information about
+what templates, source, rendering style, and context hints to use when rendering the event. In our case,
+it would look like the following:
+
+.. code-block:: python
+
+    context_renderer = ContextRenderer.objects.create(
+        render_style=RenderingStyle.objects.get(name='short'),
+        name='short_login_renderer',
+        html_template_path='my_template_dir/user_logged_in.html',
+        source=Source.objects.get(name='user_logged_in'),
+        context_hints={
+            'user': {
+                'app_name': 'auth',
+                'model_name': 'User',
+            }
+        }
     )
 
-With this setup, all of the additional information can by dynamically
-loaded into events, simply by calling :py:meth:`Event.get_context
-<entity_event.models.Event.get_context>`.
+In the above, we set up the context renderer to use the short rendering style, pointed it to our html template
+that we created, and also pointed it to the source of the event. As you can see from the html template, we
+want to reach inside of the Django User object and display the ``username`` field. In order to retrieve this
+information, we have told our context renderer to treat the ``user`` key from the event context as a PK
+to a Django ``User`` model that resides in the ``auth`` app.
 
-The ``Source`` model also uses django's ``clean`` method to ensure
-that only valid importable functions get saved in the
-database. However, if this function is removed from the codebase,
-without a proper migration, attempting to load context for events with
-this source will fail.
+With this information, we can now render the event using whatever medium we have set up in Django Entity
+Event.
 
-There are a number of trade-offs in using a context loader. If the
-underlying data is subject to change, accessing historic events could
-cause errors in the application. Additionally, a context loader that
-requires many runs to the database could cause accessing events to be
-a much more expensive operation. In either of these cases it makes
-more sense to store copies of the data in the ``context`` field of the
-event.
+.. code-block:: python
+
+    notification_medium = Medium.objects.get(name='notification')
+    events = notification_medium.events()
+
+    # Assume that two events were returned that have the following contexts
+    # e1.context = {
+    #    'user': 1, # Points to Jeff's user object
+    #    'login_time': 'January 1, 2015',
+    # }
+    # e1.context = {
+    #     'user': 2, # Points to Wes's user object
+    #     'login_time': 'February 28, 2015',
+    # }
+    #
+    # Pass the events into the medium's render method
+    rendered_events = notification_medium.render(events)
+
+    # The results are a dictionary keyed on each event. The keys point to a tuple
+    # of text and html renderings.
+    print(rendered_events[0][1])
+    'jeff logged in at January 1, 2015'
+    print(rendered_events[1][1])
+    'wes logged in at February 28, 2015'
+
+With the notion of rendering styles, the notification medium and any medium that can display short
+messages can utilize the renderings of the events. Other rendering styles can still be made for
+more complex renderings such as emails with special styling.
+
+For more advanced options on how to perform prefetch and select_relateds in the fetched contexts,
+view the :doc:`Entity Event Code Reference<ref/entity_event>`.
 
 
 Customizing Only-Following Behavior

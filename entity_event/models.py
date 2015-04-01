@@ -558,6 +558,12 @@ class Medium(models.Model):
         Renders a list of events for this medium. The events first have their contexts loaded.
         Afterwards, the rendered events are returned as a dictionary keyed on the event itself.
         The key points to a tuple of (txt, html) renderings of the event.
+
+        :type events: list
+        :param events: A list or queryset of Event models.
+
+        :rtype: dict
+        :returns: A dictionary of rendered text and html tuples keyed on the provided events.
         """
         from entity_event import context_loader
         context_loader.load_contexts_and_renderers(events, [self])
@@ -1092,39 +1098,45 @@ class ContextRenderer(models.Model):
     points to the PK of a Django `User` model, the context hints for it would be specified
     as follows:
 
-    {
-        'user': {
-            'app_name': 'auth',
-            'model_name': 'User',
+    .. code-block:: python
+
+        {
+            'user': {
+                'app_name': 'auth',
+                'model_name': 'User',
+            }
         }
-    }
 
     With these hints, the 'user' field in the event context will be treated as a PK in the
     database and fetched appropriately. If one wishes to perform and prefetch or select_related
     calls, the following options can be added:
 
-    {
-        'user': {
-            'app_name': 'auth',
-            'model_name': 'User',
-            'select_related': ['foreign_key_field', 'one_to_one_field'],
-            'prefetch_related': ['reverse_foreign_key_field', 'many_to_many_field'],
+    .. code-block:: python
+
+        {
+            'user': {
+                'app_name': 'auth',
+                'model_name': 'User',
+                'select_related': ['foreign_key_field', 'one_to_one_field'],
+                'prefetch_related': ['reverse_foreign_key_field', 'many_to_many_field'],
+            }
         }
-    }
 
     Note that as many keys can be defined that have corresponding keys in the event context for
     the particular source or source group. Also note that the keys in the event context can
     be embedded anywhere in the context and can also point to a list of PKs. For example:
 
-    {
-        'my_context': {
-            'user': [1, 3, 5, 10],
-            'other_context_info': 'other_info_string',
-        },
-        'more_context': {
-            'hello': 'world',
+    .. code-block:: python
+
+        {
+            'my_context': {
+                'user': [1, 3, 5, 10],
+                'other_context_info': 'other_info_string',
+            },
+            'more_context': {
+                'hello': 'world',
+            }
         }
-    }
 
     In the above case, `User` objects with the PKs 1, 3, 5, and 10 will be fetched and loaded into
     the event context whenever rendering is performed.

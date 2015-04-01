@@ -43,3 +43,7 @@ Code documentation
 .. autoclass:: EventActor()
 
 .. autoclass:: EventSeen()
+
+.. autoclass:: RenderingStyle()
+
+.. autoclass:: ContextRenderer()
