@@ -151,13 +151,13 @@ def load_renderers_into_events(events, mediums, context_renderers):
     Given the events and the context renderers, load the renderers into the event objects
     so that they may be able to call the 'render' method later on.
     """
-    mediums_per_render_group = defaultdict(list)
+    mediums_per_rendering_style = defaultdict(list)
     for medium in mediums:
-        mediums_per_render_group[medium.render_group_id].append(medium)
+        mediums_per_rendering_style[medium.rendering_style_id].append(medium)
 
     medium_renderers_per_source = defaultdict(dict)
     for renderer in context_renderers:
-        for medium in mediums_per_render_group[renderer.render_group_id]:
+        for medium in mediums_per_rendering_style[renderer.rendering_style_id]:
             for source in renderer.get_sources():
                 medium_renderers_per_source[source.id][medium] = renderer
 
@@ -171,10 +171,10 @@ def load_contexts_and_renderers(events, mediums):
     Given a list of events and mediums, load the context model data into the contexts of the events.
     """
     sources = {event.source for event in events}
-    render_groups = {medium.render_group for medium in mediums}
+    rendering_styles = {medium.rendering_style for medium in mediums}
     context_renderers = ContextRenderer.objects.filter(
-        Q(source__in=sources, render_group__in=render_groups) |
-        Q(source_group_id__in=[s.group_id for s in sources], render_group__in=render_groups)).select_related(
+        Q(source__in=sources, rendering_style__in=rendering_styles) |
+        Q(source_group_id__in=[s.group_id for s in sources], rendering_style__in=rendering_styles)).select_related(
             'source').prefetch_related('source_group__source_set')
 
     context_hints_per_source = get_context_hints_per_source(context_renderers)

@@ -10,7 +10,7 @@ from six import text_type
 
 from entity_event.models import (
     Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen,
-    RenderGroup, ContextRenderer, _unseen_event_ids
+    RenderingStyle, ContextRenderer, _unseen_event_ids
 )
 from entity_event.tests.models import TestFKModel
 
@@ -20,17 +20,17 @@ class EventRenderTest(TestCase):
     Does an entire integration test for rendering events relative to mediums.
     """
     def test_one_context_renderer_one_medium(self):
-        rg = G(RenderGroup)
+        rg = G(RenderingStyle)
         s = G(Source)
         G(
-            ContextRenderer, source=s, render_group=rg, text_template_path='test_template.txt',
+            ContextRenderer, source=s, rendering_style=rg, text_template_path='test_template.txt',
             html_template_path='test_template.html', context_hints={
                 'fk_model': {
                     'app_name': 'tests',
                     'model_name': 'TestFKModel',
                 }
             })
-        m = G(Medium, render_group=rg)
+        m = G(Medium, rendering_style=rg)
 
         fkm = G(TestFKModel, value=100)
         G(Event, source=s, context={'fk_model': fkm.id})
@@ -42,17 +42,17 @@ class EventRenderTest(TestCase):
         self.assertEquals(html, 'Test html template with value 100')
 
     def test_wo_fetching_contexts(self):
-        rg = G(RenderGroup)
+        rg = G(RenderingStyle)
         s = G(Source)
         G(
-            ContextRenderer, source=s, render_group=rg, text_template_path='test_template.txt',
+            ContextRenderer, source=s, rendering_style=rg, text_template_path='test_template.txt',
             html_template_path='test_template.html', context_hints={
                 'fk_model': {
                     'app_name': 'tests',
                     'model_name': 'TestFKModel',
                 }
             })
-        m = G(Medium, render_group=rg)
+        m = G(Medium, rendering_style=rg)
 
         fkm = G(TestFKModel, value=100)
         e = G(Event, source=s, context={'fk_model': fkm.id})
@@ -512,7 +512,7 @@ class UnseenEventIdsTest(TestCase):
 
 class UnicodeTest(SimpleTestCase):
     def setUp(self):
-        self.render_group = N(RenderGroup, display_name='Test Render Group', persist_dependencies=False)
+        self.rendering_style = N(RenderingStyle, display_name='Test Render Group', persist_dependencies=False)
         self.context_renderer = N(ContextRenderer, name='Test Context Renderer', persist_dependencies=False)
         self.medium = N(Medium, display_name='Test Medium', persist_dependencies=False)
         self.source = N(Source, display_name='Test Source', persist_dependencies=False)
@@ -527,8 +527,8 @@ class UnicodeTest(SimpleTestCase):
         self.event_seen = N(
             EventSeen, event=self.event, medium=self.medium, time_seen=datetime(2014, 1, 2), persist_dependencies=False)
 
-    def test_rendergroup_formats(self):
-        s = text_type(self.render_group)
+    def test_RenderingStyle_formats(self):
+        s = text_type(self.rendering_style)
         self.assertEquals(s, 'Test Render Group')
 
     def test_contextrenderer_formats(self):

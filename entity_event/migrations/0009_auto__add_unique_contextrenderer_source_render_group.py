@@ -8,28 +8,82 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
+        # Deleting model 'RenderGroup'
+        db.delete_table(u'entity_event_rendergroup')
+
+        # Adding model 'RenderingStyle'
+        db.create_table(u'entity_event_renderingstyle', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(unique=True, max_length=64)),
+            ('display_name', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
+        ))
+        db.send_create_signal(u'entity_event', ['RenderingStyle'])
+
+        # Deleting field 'ContextRenderer.render_group'
+        db.delete_column(u'entity_event_contextrenderer', 'render_group_id')
+
         # Adding field 'ContextRenderer.source_group'
         db.add_column(u'entity_event_contextrenderer', 'source_group',
                       self.gf('django.db.models.fields.related.ForeignKey')(to=orm['entity_event.SourceGroup'], null=True),
                       keep_default=False)
 
+        # Adding field 'ContextRenderer.rendering_style'
+        db.add_column(u'entity_event_contextrenderer', 'rendering_style',
+                      self.gf('django.db.models.fields.related.ForeignKey')(default=0, to=orm['entity_event.RenderingStyle']),
+                      keep_default=False)
+
 
         # Changing field 'ContextRenderer.source'
         db.alter_column(u'entity_event_contextrenderer', 'source_id', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['entity_event.Source'], null=True))
-        # Adding unique constraint on 'ContextRenderer', fields ['source', 'render_group']
-        db.create_unique(u'entity_event_contextrenderer', ['source_id', 'render_group_id'])
+        # Adding unique constraint on 'ContextRenderer', fields ['source', 'rendering_style']
+        db.create_unique(u'entity_event_contextrenderer', ['source_id', 'rendering_style_id'])
+
+        # Deleting field 'Medium.render_group'
+        db.delete_column(u'entity_event_medium', 'render_group_id')
+
+        # Adding field 'Medium.rendering_style'
+        db.add_column(u'entity_event_medium', 'rendering_style',
+                      self.gf('django.db.models.fields.related.ForeignKey')(to=orm['entity_event.RenderingStyle'], null=True),
+                      keep_default=False)
 
 
     def backwards(self, orm):
-        # Removing unique constraint on 'ContextRenderer', fields ['source', 'render_group']
-        db.delete_unique(u'entity_event_contextrenderer', ['source_id', 'render_group_id'])
+        # Removing unique constraint on 'ContextRenderer', fields ['source', 'rendering_style']
+        db.delete_unique(u'entity_event_contextrenderer', ['source_id', 'rendering_style_id'])
+
+        # Adding model 'RenderGroup'
+        db.create_table(u'entity_event_rendergroup', (
+            ('display_name', self.gf('django.db.models.fields.CharField')(default='', max_length=64)),
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=64, unique=True)),
+        ))
+        db.send_create_signal(u'entity_event', ['RenderGroup'])
+
+        # Deleting model 'RenderingStyle'
+        db.delete_table(u'entity_event_renderingstyle')
+
+        # Adding field 'ContextRenderer.render_group'
+        db.add_column(u'entity_event_contextrenderer', 'render_group',
+                      self.gf('django.db.models.fields.related.ForeignKey')(default=0, to=orm['entity_event.RenderGroup']),
+                      keep_default=False)
 
         # Deleting field 'ContextRenderer.source_group'
         db.delete_column(u'entity_event_contextrenderer', 'source_group_id')
 
+        # Deleting field 'ContextRenderer.rendering_style'
+        db.delete_column(u'entity_event_contextrenderer', 'rendering_style_id')
+
 
         # Changing field 'ContextRenderer.source'
         db.alter_column(u'entity_event_contextrenderer', 'source_id', self.gf('django.db.models.fields.related.ForeignKey')(default=0, to=orm['entity_event.Source']))
+        # Adding field 'Medium.render_group'
+        db.add_column(u'entity_event_medium', 'render_group',
+                      self.gf('django.db.models.fields.related.ForeignKey')(default=0, to=orm['entity_event.RenderGroup']),
+                      keep_default=False)
+
+        # Deleting field 'Medium.rendering_style'
+        db.delete_column(u'entity_event_medium', 'rendering_style_id')
+
 
     models = {
         u'contenttypes.contenttype': {
@@ -56,13 +110,13 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '256', 'db_index': 'True'})
         },
         u'entity_event.contextrenderer': {
-            'Meta': {'unique_together': "(('source', 'render_group'),)", 'object_name': 'ContextRenderer'},
+            'Meta': {'unique_together': "(('source', 'rendering_style'),)", 'object_name': 'ContextRenderer'},
             'context_hints': ('jsonfield.fields.JSONField', [], {'default': 'None', 'null': 'True'}),
             'html_template': ('django.db.models.fields.TextField', [], {'default': "''"}),
             'html_template_path': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '256'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '64'}),
-            'render_group': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.RenderGroup']"}),
+            'rendering_style': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.RenderingStyle']"}),
             'source': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.Source']", 'null': 'True'}),
             'source_group': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.SourceGroup']", 'null': 'True'}),
             'text_template': ('django.db.models.fields.TextField', [], {'default': "''"}),
@@ -96,10 +150,10 @@ class Migration(SchemaMigration):
             'display_name': ('django.db.models.fields.CharField', [], {'max_length': '64'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '64'}),
-            'render_group': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.RenderGroup']"})
+            'rendering_style': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['entity_event.RenderingStyle']", 'null': 'True'})
         },
-        u'entity_event.rendergroup': {
-            'Meta': {'object_name': 'RenderGroup'},
+        u'entity_event.renderingstyle': {
+            'Meta': {'object_name': 'RenderingStyle'},
             'display_name': ('django.db.models.fields.CharField', [], {'default': "''", 'max_length': '64'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'unique': 'True', 'max_length': '64'})

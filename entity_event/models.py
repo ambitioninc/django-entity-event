@@ -51,11 +51,16 @@ class Medium(models.Model):
     ``entity_events`` and ``events_targets``. The differences between
     these methods are described in their corresponding documentation.
 
+    A medium can use a ``RenderingStyle`` to use a configured style of rendering
+    with the medium. Any associated ``ContextRenderer`` models defined with
+    that rendering style will be used to render events in the ``render`` method
+    of the medium. This is an optional part of Entity Event's built-in
+    rendering system.
     """
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
-    render_group = models.ForeignKey('RenderGroup')
+    rendering_style = models.ForeignKey('RenderingStyle', null=True)
 
     def __str__(self):
         """Readable representation of ``Medium`` objects."""
@@ -1050,9 +1055,11 @@ def _unseen_event_ids(medium):
 
 
 @python_2_unicode_compatible
-class RenderGroup(models.Model):
+class RenderingStyle(models.Model):
     """
-    Defines a grouping of things that have events rendered the same way.
+    Defines a rendering style. This is used to group together mediums that have
+    similar rendering styles and allows context renderers to be used across
+    mediums.
     """
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64, default='')
@@ -1097,14 +1104,14 @@ class ContextRenderer(models.Model):
     source = models.ForeignKey(Source, null=True)
     source_group = models.ForeignKey(SourceGroup, null=True)
 
-    # The render group. Used to associated it with a medium
-    render_group = models.ForeignKey(RenderGroup)
+    # The rendering style. Used to associated it with a medium
+    rendering_style = models.ForeignKey(RenderingStyle)
 
     # Containts hints on how to fetch the context from the database
     context_hints = jsonfield.JSONField(null=True, default=None)
 
     class Meta:
-        unique_together = ('source', 'render_group')
+        unique_together = ('source', 'rendering_style')
 
     def get_sources(self):
         return [self.source] if self.source_id else self.source_group.source_set.all()

@@ -444,13 +444,13 @@ class TestLoadRenderersIntoEvents(SimpleTestCase):
         s2 = N(models.Source, id=2, persist_dependencies=False)
         e1 = N(models.Event, context={}, source=s1, persist_dependencies=False)
         e2 = N(models.Event, context={}, source=s2, persist_dependencies=False)
-        rg1 = N(models.RenderGroup, id=1, persist_dependencies=False)
-        rg2 = N(models.RenderGroup, id=2, persist_dependencies=False)
-        m1 = N(models.Medium, id=1, render_group=rg1, persist_dependencies=False)
-        m2 = N(models.Medium, id=2, render_group=rg2, persist_dependencies=False)
-        cr1 = N(models.ContextRenderer, source=s1, render_group=rg1, id=1, persist_dependencies=False)
-        cr2 = N(models.ContextRenderer, source=s2, render_group=rg1, id=2, persist_dependencies=False)
-        cr3 = N(models.ContextRenderer, source=s1, render_group=rg2, id=3, persist_dependencies=False)
+        rg1 = N(models.RenderingStyle, id=1, persist_dependencies=False)
+        rg2 = N(models.RenderingStyle, id=2, persist_dependencies=False)
+        m1 = N(models.Medium, id=1, rendering_style=rg1, persist_dependencies=False)
+        m2 = N(models.Medium, id=2, rendering_style=rg2, persist_dependencies=False)
+        cr1 = N(models.ContextRenderer, source=s1, rendering_style=rg1, id=1, persist_dependencies=False)
+        cr2 = N(models.ContextRenderer, source=s2, rendering_style=rg1, id=2, persist_dependencies=False)
+        cr3 = N(models.ContextRenderer, source=s1, rendering_style=rg2, id=3, persist_dependencies=False)
 
         context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2, cr3])
 
@@ -478,10 +478,10 @@ class LoadContextsAndRenderersTest(TestCase):
     def test_one_render_target_one_event(self):
         m1 = G(test_models.TestModel)
         s = G(models.Source)
-        rg = G(models.RenderGroup)
+        rg = G(models.RenderingStyle)
         e = G(models.Event, context={'key': m1.id}, source=s)
-        medium = G(models.Medium, source=s, render_group=rg)
-        G(models.ContextRenderer, render_group=rg, source=s, context_hints={
+        medium = G(models.Medium, source=s, rendering_style=rg)
+        G(models.ContextRenderer, rendering_style=rg, source=s, context_hints={
             'key': {
                 'model_name': 'TestModel',
                 'app_name': 'tests',
@@ -499,18 +499,18 @@ class LoadContextsAndRenderersTest(TestCase):
         test_fk_m2 = G(test_models.TestFKModel)
         s1 = G(models.Source)
         s2 = G(models.Source)
-        rg1 = G(models.RenderGroup)
-        rg2 = G(models.RenderGroup)
-        medium1 = G(models.Medium, source=s1, render_group=rg1)
-        medium2 = G(models.Medium, source=s2, render_group=rg2)
+        rg1 = G(models.RenderingStyle)
+        rg2 = G(models.RenderingStyle)
+        medium1 = G(models.Medium, source=s1, rendering_style=rg1)
+        medium2 = G(models.Medium, source=s2, rendering_style=rg2)
 
-        cr1 = G(models.ContextRenderer, render_group=rg1, source=s1, context_hints={
+        cr1 = G(models.ContextRenderer, rendering_style=rg1, source=s1, context_hints={
             'key': {
                 'model_name': 'TestModel',
                 'app_name': 'tests',
             }
         })
-        cr2 = G(models.ContextRenderer, render_group=rg2, source=s2, context_hints={
+        cr2 = G(models.ContextRenderer, rendering_style=rg2, source=s2, context_hints={
             'key': {
                 'model_name': 'TestModel',
                 'app_name': 'tests',
@@ -559,19 +559,19 @@ class LoadContextsAndRenderersTest(TestCase):
         test_fk_m2 = G(test_models.TestFKModel)
         s1 = G(models.Source)
         s2 = G(models.Source)
-        rg1 = G(models.RenderGroup)
-        rg2 = G(models.RenderGroup)
-        medium1 = G(models.Medium, source=s1, render_group=rg1)
-        medium2 = G(models.Medium, source=s2, render_group=rg2)
+        rg1 = G(models.RenderingStyle)
+        rg2 = G(models.RenderingStyle)
+        medium1 = G(models.Medium, source=s1, rendering_style=rg1)
+        medium2 = G(models.Medium, source=s2, rendering_style=rg2)
 
-        G(models.ContextRenderer, render_group=rg1, source=s1, context_hints={
+        G(models.ContextRenderer, rendering_style=rg1, source=s1, context_hints={
             'key': {
                 'model_name': 'TestModel',
                 'app_name': 'tests',
                 'select_related': ['fk'],
             }
         })
-        G(models.ContextRenderer, render_group=rg2, source=s2, context_hints={
+        G(models.ContextRenderer, rendering_style=rg2, source=s2, context_hints={
             'key': {
                 'model_name': 'TestModel',
                 'app_name': 'tests',
