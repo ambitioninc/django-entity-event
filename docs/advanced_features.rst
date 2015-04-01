@@ -115,8 +115,7 @@ messages can utilize the renderings of the events. Other rendering styles can st
 more complex renderings such as emails with special styling.
 
 For more advanced options on how to perform prefetch and select_relateds in the fetched contexts,
-view the :doc:`Entity Event Code Reference<ref/entity_event>`.
-
+view :py:class:`~entity_event.models.ContextRenderer`.
 
 Customizing Only-Following Behavior
 -----------------------------------
