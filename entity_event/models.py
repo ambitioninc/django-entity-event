@@ -1071,26 +1071,63 @@ class RenderingStyle(models.Model):
 @python_2_unicode_compatible
 class ContextRenderer(models.Model):
     """``ContextRenderer`` objects store information about how
-    a source is rendered to a particular rendering group, along with
+    a source or source group is rendered with a particular rendering style, along with
     information for loading the render context in a database-efficient
     manner.
 
-    This object defines the templates used to render a context for
-    a given source and render group.
-
     Of the four template fields: `text_template_path`, 'html_template_path',
     `text_template`, and `html_template`, at least one must be
-    non-empty.
-
-    Both a text and html template may be provided, either
+    non-empty. Both a text and html template may be provided, either
     through a path to the template, or a raw template object.
-
     However, for either text or html templates, both a path and raw
     template should not be provided.
 
-    This object also specifies a render group in order for mediums
-    to specify the template renderer they utilize for different
-    sources.
+    This object is linked to a `RenderingStyle` object. This is how the
+    context renderer is associated with various `Medium` objects. It also
+    provides the `source` that uses the renderer. If a `source_group` is specified,
+    all sources under that group use this context renderer for the rendering style.
+
+    The `context_hints` provide the ability to fetch model IDs of an event context that
+    are stored in the database. For example, if an event context has a `user` key that
+    points to the PK of a Django `User` model, the context hints for it would be specified
+    as follows:
+
+    {
+        'user': {
+            'app_name': 'auth',
+            'model_name': 'User',
+        }
+    }
+
+    With these hints, the 'user' field in the event context will be treated as a PK in the
+    database and fetched appropriately. If one wishes to perform and prefetch or select_related
+    calls, the following options can be added:
+
+    {
+        'user': {
+            'app_name': 'auth',
+            'model_name': 'User',
+            'select_related': ['foreign_key_field', 'one_to_one_field'],
+            'prefetch_related': ['reverse_foreign_key_field', 'many_to_many_field'],
+        }
+    }
+
+    Note that as many keys can be defined that have corresponding keys in the event context for
+    the particular source or source group. Also note that the keys in the event context can
+    be embedded anywhere in the context and can also point to a list of PKs. For example:
+
+    {
+        'my_context': {
+            'user': [1, 3, 5, 10],
+            'other_context_info': 'other_info_string',
+        },
+        'more_context': {
+            'hello': 'world',
+        }
+    }
+
+    In the above case, `User` objects with the PKs 1, 3, 5, and 10 will be fetched and loaded into
+    the event context whenever rendering is performed.
     """
     name = models.CharField(max_length=64, unique=True)
 
