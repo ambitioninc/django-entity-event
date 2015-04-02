@@ -1,15 +1,64 @@
 from datetime import datetime
 
-from django.core.exceptions import ValidationError, ImproperlyConfigured
+from django.template import Template
 from django.test import TestCase, SimpleTestCase
 from django_dynamic_fixture import N, G
 from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
+from mock import patch, call, Mock
 from six import text_type
 
 from entity_event.models import (
-    Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen, _unseen_event_ids
+    Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen,
+    RenderingStyle, ContextRenderer, _unseen_event_ids
 )
+from entity_event.tests.models import TestFKModel
+
+
+class EventRenderTest(TestCase):
+    """
+    Does an entire integration test for rendering events relative to mediums.
+    """
+    def test_one_context_renderer_one_medium(self):
+        rg = G(RenderingStyle)
+        s = G(Source)
+        G(
+            ContextRenderer, source=s, rendering_style=rg, text_template_path='test_template.txt',
+            html_template_path='test_template.html', context_hints={
+                'fk_model': {
+                    'app_name': 'tests',
+                    'model_name': 'TestFKModel',
+                }
+            })
+        m = G(Medium, rendering_style=rg)
+
+        fkm = G(TestFKModel, value=100)
+        G(Event, source=s, context={'fk_model': fkm.id})
+
+        events = Event.objects.all().load_contexts_and_renderers(m)
+        txt, html = events[0].render(m)
+
+        self.assertEquals(txt, 'Test text template with value 100')
+        self.assertEquals(html, 'Test html template with value 100')
+
+    def test_wo_fetching_contexts(self):
+        rg = G(RenderingStyle)
+        s = G(Source)
+        G(
+            ContextRenderer, source=s, rendering_style=rg, text_template_path='test_template.txt',
+            html_template_path='test_template.html', context_hints={
+                'fk_model': {
+                    'app_name': 'tests',
+                    'model_name': 'TestFKModel',
+                }
+            })
+        m = G(Medium, rendering_style=rg)
+
+        fkm = G(TestFKModel, value=100)
+        e = G(Event, source=s, context={'fk_model': fkm.id})
+
+        with self.assertRaises(RuntimeError):
+            e.render(m)
 
 
 class EventManagerCreateEventTest(TestCase):
@@ -59,48 +108,22 @@ class EventManagerCreateEventTest(TestCase):
         self.assertIsNone(e)
 
 
-def basic_context_loader(context):
-    return {'hello': 'hello'}
-
-
-class SourceGetContextLoaderTest(SimpleTestCase):
-    def test_loads_context_loader(self):
-        template = Source(context_loader='entity_event.tests.models_tests.basic_context_loader')
-        loader_func = template.get_context_loader_function()
-        self.assertEqual(loader_func, basic_context_loader)
-
-    def test_invalid_context_loader(self):
-        template = Source(context_loader='entity_event.tests.models_tests.invalid_context_loader')
-        with self.assertRaises(ImproperlyConfigured):
-            template.get_context_loader_function()
-
-
-class SourceCleanTest(SimpleTestCase):
-    def test_invalid_context_path_does_not_validate(self):
-        with self.assertRaises(ValidationError):
-            Source(context_loader='invalid_path').clean()
-
-
-class EventGetContext(SimpleTestCase):
-    def test_without_context_loader(self):
-        event = N(
-            Event, context={'hi': 'hi'}, persist_dependencies=False, source=N(
-                Source, context_loader='entity_event.tests.models_tests.basic_context_loader',
-                persist_dependencies=False))
-        self.assertEqual(event.get_context(), {'hello': 'hello'})
-
-    def test_with_context_loader(self):
-        event = N(Event, context={'hi': 'hi'}, persist_dependencies=False)
-        self.assertEqual(event.get_context(), {'hi': 'hi'})
-
-
-class EventManagerTest(TestCase):
+class EventManagerQuerySetTest(TestCase):
     def test_mark_seen(self):
         event = G(Event, context={})
         medium = G(Medium)
         Event.objects.mark_seen(medium)
         self.assertEqual(EventSeen.objects.count(), 1)
         self.assertTrue(EventSeen.objects.filter(event=event, medium=medium).exists())
+
+    @patch('entity_event.context_loader.load_contexts_and_renderers', spec_set=True)
+    def test_load_contexts_and_renderers(self, mock_load_contexts_and_renderers):
+        e = G(Event, context={})
+        medium = G(Medium)
+        Event.objects.load_contexts_and_renderers(medium)
+        self.assertEquals(mock_load_contexts_and_renderers.call_count, 1)
+        self.assertEquals(list(mock_load_contexts_and_renderers.call_args_list[0][0][0]), [e])
+        self.assertEquals(mock_load_contexts_and_renderers.call_args_list[0][0][1], [medium])
 
 
 class MediumEventsInterfacesTest(TestCase):
@@ -194,6 +217,25 @@ class MediumEventsInterfacesTest(TestCase):
     def test_entity_targets_only_following(self):
         events_targets = self.medium_z.events_targets(entity_kind=self.person_kind)
         self.assertEqual(len(events_targets[0][1]), 1)
+
+
+class MediumRenderTest(SimpleTestCase):
+    @patch('entity_event.context_loader.load_contexts_and_renderers', spec_set=True)
+    def test_render(self, mock_load_contexts_and_renderers):
+        medium = N(Medium, persist_dependencies=False)
+        e1 = Mock(render=Mock(return_value=('e1.txt', 'e1.html')))
+        e2 = Mock(render=Mock(return_value=('e2.txt', 'e2.html')))
+
+        events = [e1, e2]
+        res = medium.render(events)
+
+        mock_load_contexts_and_renderers.assert_called_once_with(events, [medium])
+        self.assertEquals(res, {
+            e1: ('e1.txt', 'e1.html'),
+            e2: ('e2.txt', 'e2.html'),
+        })
+        e1.render.assert_called_once_with(medium)
+        e2.render.assert_called_once_with(medium)
 
 
 class MediumSubsetSubscriptionsTest(TestCase):
@@ -298,7 +340,7 @@ class MediumGetEventFiltersTest(TestCase):
 
 class MediumFollowedByTest(TestCase):
     def setUp(self):
-        self.medium = N(Medium)
+        self.medium = N(Medium, persist_dependencies=False)
         self.superentity = G(Entity)
         self.sub1, self.sub2 = G(Entity), G(Entity)
         G(EntityRelationship, super_entity=self.superentity, sub_entity=self.sub1)
@@ -331,7 +373,7 @@ class MediumFollowedByTest(TestCase):
 
 class MediumFollowersOfTest(TestCase):
     def setUp(self):
-        self.medium = N(Medium)
+        self.medium = N(Medium, persist_dependencies=False)
         self.superentity = G(Entity)
         self.sub1, self.sub2 = G(Entity), G(Entity)
         self.random_entity = G(Entity)
@@ -371,8 +413,8 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
         G(EntityRelationship, super_entity=superentity, sub_entity=sub1)
         G(EntityRelationship, super_entity=superentity, sub_entity=sub2)
 
-        self.group_sub = N(Subscription, entity=superentity, sub_entity_kind=person_kind)
-        self.indiv_sub = N(Subscription, entity=superentity, sub_entity_kind=None)
+        self.group_sub = N(Subscription, entity=superentity, sub_entity_kind=person_kind, persist_dependencies=False)
+        self.indiv_sub = N(Subscription, entity=superentity, sub_entity_kind=None, persist_dependencies=False)
 
     def test_both_branches_return_queryset(self):
         group_qs = self.group_sub.subscribed_entities()
@@ -386,6 +428,64 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
     def test_length_indiv(self):
         indiv_qs = self.indiv_sub.subscribed_entities()
         self.assertEqual(indiv_qs.count(), 1)
+
+
+class ContextRendererRenderTextOrHtmlTemplateTest(SimpleTestCase):
+    @patch('entity_event.models.render_to_string', spec_set=True)
+    def test_w_html_template_path(self, mock_render_to_string):
+        cr = N(ContextRenderer, html_template_path='html_path', persist_dependencies=False)
+        c = {'context': 'context'}
+        cr.render_text_or_html_template(c, is_text=False)
+        mock_render_to_string.assert_called_once_with('html_path', c)
+
+    @patch('entity_event.models.render_to_string', spec_set=True)
+    def test_w_text_template_path(self, mock_render_to_string):
+        cr = N(ContextRenderer, text_template_path='text_path', persist_dependencies=False)
+        c = {'context': 'context'}
+        cr.render_text_or_html_template(c, is_text=True)
+        mock_render_to_string.assert_called_once_with('text_path', c)
+
+    @patch.object(Template, '__init__', spec_set=True, return_value=None)
+    @patch.object(Template, 'render', spec_set=True)
+    def test_w_html_template(self, mock_render, mock_init):
+        cr = N(ContextRenderer, html_template='html_template', persist_dependencies=False)
+        c = {'context': 'context'}
+        cr.render_text_or_html_template(c, is_text=False)
+        self.assertEqual(mock_render.call_count, 1)
+        mock_init.assert_called_once_with('html_template')
+
+    @patch.object(Template, '__init__', spec_set=True, return_value=None)
+    @patch.object(Template, 'render', spec_set=True)
+    def test_w_text_template(self, mock_render, mock_init):
+        cr = N(ContextRenderer, text_template='text_template', persist_dependencies=False)
+        c = {'context': 'context'}
+        cr.render_text_or_html_template(c, is_text=True)
+        self.assertEqual(mock_render.call_count, 1)
+        mock_init.assert_called_once_with('text_template')
+
+    def test_w_no_templates_text(self):
+        cr = N(ContextRenderer, persist_dependencies=False)
+        c = {'context': 'context'}
+        self.assertEqual(cr.render_text_or_html_template(c, is_text=True), '')
+
+    def test_w_no_templates_html(self):
+        cr = N(ContextRenderer, persist_dependencies=False)
+        c = {'context': 'context'}
+        self.assertEqual(cr.render_text_or_html_template(c, is_text=False), '')
+
+
+class ContextRendererRenderContextToTextHtmlTemplates(SimpleTestCase):
+    @patch.object(ContextRenderer, 'render_text_or_html_template', spec_set=True)
+    def test_render_context_to_text_html_templates(self, mock_render_text_or_html_template):
+        c = {'context': 'context'}
+        r = ContextRenderer().render_context_to_text_html_templates(c)
+        self.assertEqual(
+            r, (
+                mock_render_text_or_html_template.return_value.strip(),
+                mock_render_text_or_html_template.return_value.strip()
+            ))
+        self.assertEqual(
+            mock_render_text_or_html_template.call_args_list, [call(c, is_text=True), call(c, is_text=False)])
 
 
 class UnseenEventIdsTest(TestCase):
@@ -410,23 +510,30 @@ class UnseenEventIdsTest(TestCase):
         self.assertEqual(set(unseen_ids), set([e1.id, e3.id, e4.id]))
 
 
-# Note: The following freeze_time a few more minutes than what we
-# want, in order to work around a strange off by a few seconds bug in
-# freezegun. I'm not sure what other way to fix it. Since we're only
-# testing unicode representations here, it isn't terribly important.
-@freeze_time(datetime(2014, 1, 1, 0, 10))
-class UnicodeTest(TestCase):
+class UnicodeTest(SimpleTestCase):
     def setUp(self):
-        self.medium = N(Medium, display_name='Test Medium')
-        self.source = N(Source, display_name='Test Source')
-        self.source_group = N(SourceGroup, display_name='Test Source Group')
-        self.entity = N(Entity, display_name='Test Entity')
-        self.entity_string = text_type(self.entity)
-        self.unsubscription = N(Unsubscription, entity=self.entity, medium=self.medium, source=self.source)
-        self.subscription = N(Subscription, entity=self.entity, source=self.source, medium=self.medium)
-        self.event = N(Event, source=self.source, context={}, id=1)
-        self.event_actor = N(EventActor, event=self.event, entity=self.entity)
-        self.event_seen = N(EventSeen, event=self.event, medium=self.medium, time_seen=datetime(2014, 1, 2))
+        self.rendering_style = N(RenderingStyle, display_name='Test Render Group', persist_dependencies=False)
+        self.context_renderer = N(ContextRenderer, name='Test Context Renderer', persist_dependencies=False)
+        self.medium = N(Medium, display_name='Test Medium', persist_dependencies=False)
+        self.source = N(Source, display_name='Test Source', persist_dependencies=False)
+        self.source_group = N(SourceGroup, display_name='Test Source Group', persist_dependencies=False)
+        self.entity = N(Entity, display_name='Test Entity', persist_dependencies=False)
+        self.unsubscription = N(
+            Unsubscription, entity=self.entity, medium=self.medium, source=self.source, persist_dependencies=False)
+        self.subscription = N(
+            Subscription, entity=self.entity, source=self.source, medium=self.medium, persist_dependencies=False)
+        self.event = N(Event, source=self.source, context={}, id=1, persist_dependencies=False)
+        self.event_actor = N(EventActor, event=self.event, entity=self.entity, persist_dependencies=False)
+        self.event_seen = N(
+            EventSeen, event=self.event, medium=self.medium, time_seen=datetime(2014, 1, 2), persist_dependencies=False)
+
+    def test_RenderingStyle_formats(self):
+        s = text_type(self.rendering_style)
+        self.assertEquals(s, 'Test Render Group')
+
+    def test_contextrenderer_formats(self):
+        s = text_type(self.context_renderer)
+        self.assertEquals(s, 'Test Context Renderer')
 
     def test_medium_formats(self):
         s = text_type(self.medium)
@@ -442,11 +549,11 @@ class UnicodeTest(TestCase):
 
     def test_unsubscription_formats(self):
         s = text_type(self.unsubscription)
-        self.assertEqual(s, '{0} from Test Source by Test Medium'.format(self.entity_string))
+        self.assertEqual(s, '{0} from Test Source by Test Medium'.format(self.entity))
 
     def test_subscription_formats(self):
         s = text_type(self.subscription)
-        self.assertEqual(s, '{0} to Test Source by Test Medium'.format(self.entity_string))
+        self.assertEqual(s, '{0} to Test Source by Test Medium'.format(self.entity))
 
     def test_event_formats(self):
         s = text_type(self.event)
@@ -454,7 +561,7 @@ class UnicodeTest(TestCase):
 
     def test_eventactor_formats(self):
         s = text_type(self.event_actor)
-        self.assertEqual(s, 'Event 1 - {0}'.format(self.entity_string))
+        self.assertEqual(s, 'Event 1 - {0}'.format(self.entity))
 
     def test_event_seenformats(self):
         s = text_type(self.event_seen)
