@@ -1085,8 +1085,8 @@ class ContextRenderer(models.Model):
     `text_template`, and `html_template`, at least one must be
     non-empty. Both a text and html template may be provided, either
     through a path to the template, or a raw template object.
-    However, for either text or html templates, both a path and raw
-    template should not be provided.
+    If both are provided, the template given in the path will be used and
+    the text template will be ignored.
 
     This object is linked to a `RenderingStyle` object. This is how the
     context renderer is associated with various `Medium` objects. It also
