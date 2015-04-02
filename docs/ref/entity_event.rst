@@ -17,10 +17,10 @@ Code documentation
 
    .. automethod:: followers_of(self, entities)
 
+   .. automethod:: render(self, events)
+
 
 .. autoclass:: Source()
-
-    .. automethod:: get_context(self, context)
 
 .. autoclass:: SourceGroup()
 
@@ -40,10 +40,10 @@ Code documentation
 
    .. automethod:: mark_seen(self, medium)
 
-.. autoclass:: Event()
-
-   .. automethod:: get_context(self)
-
 .. autoclass:: EventActor()
 
 .. autoclass:: EventSeen()
+
+.. autoclass:: RenderingStyle()
+
+.. autoclass:: ContextRenderer()

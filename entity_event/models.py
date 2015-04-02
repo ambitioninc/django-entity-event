@@ -1,18 +1,17 @@
 from collections import defaultdict
 from datetime import datetime
 from operator import or_
+from six.moves import reduce
 
 from cached_property import cached_property
-from django.core.exceptions import ValidationError, ImproperlyConfigured
 from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.query import QuerySet
+from django.template.loader import render_to_string
+from django.template import Context, Template
 from django.utils.encoding import python_2_unicode_compatible
-from django.utils.module_loading import import_by_path
-import jsonfield
-from six.moves import reduce
-
 from entity.models import Entity, EntityKind, EntityRelationship
+import jsonfield
 
 
 @python_2_unicode_compatible
@@ -52,10 +51,16 @@ class Medium(models.Model):
     ``entity_events`` and ``events_targets``. The differences between
     these methods are described in their corresponding documentation.
 
+    A medium can use a ``RenderingStyle`` to use a configured style of rendering
+    with the medium. Any associated ``ContextRenderer`` models defined with
+    that rendering style will be used to render events in the ``render`` method
+    of the medium. This is an optional part of Entity Event's built-in
+    rendering system.
     """
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
+    rendering_style = models.ForeignKey('RenderingStyle', null=True)
 
     def __str__(self):
         """Readable representation of ``Medium`` objects."""
@@ -548,13 +553,29 @@ class Medium(models.Model):
             Q(id__in=entities) | Q(id__in=sub_entities))
         return followers_of
 
+    def render(self, events):
+        """
+        Renders a list of events for this medium. The events first have their contexts loaded.
+        Afterwards, the rendered events are returned as a dictionary keyed on the event itself.
+        The key points to a tuple of (txt, html) renderings of the event.
+
+        :type events: list
+        :param events: A list or queryset of Event models.
+
+        :rtype: dict
+        :returns: A dictionary of rendered text and html tuples keyed on the provided events.
+        """
+        from entity_event import context_loader
+        context_loader.load_contexts_and_renderers(events, [self])
+        return {e: e.render(self) for e in events}
+
 
 @python_2_unicode_compatible
 class Source(models.Model):
     """A ``Source`` is an object in the database that represents where
     events come from. These objects only require a few fields,
-    ``name``, ``display_name`` ``description``, ``group`` and
-    optionally ``context_loader``. Source objects categorize events
+    ``name``, ``display_name`` ``description``, and ``group``.
+    Source objects categorize events
     based on where they came from, or what type of information they
     contain. Each source should be fairly fine grained, with broader
     categorizations possible through ``SourceGroup`` objects. Sources
@@ -575,11 +596,6 @@ class Source(models.Model):
     :param group: A SourceGroup object. A broad grouping of where the
         events originate.
 
-    :type context_loader: (optional) str
-    :param context_loader: A importable path to a function, which can
-        take a dictionary of context, and populate it with more
-        information from the database or other sources.
-
     Storing source objects in the database servers two purposes. The
     first is to provide an object that Subscriptions can reference,
     allowing different categories of events to be subscribed to over
@@ -599,49 +615,6 @@ class Source(models.Model):
     display_name = models.CharField(max_length=64)
     description = models.TextField()
     group = models.ForeignKey('SourceGroup')
-    # An optional function path that loads the context of an event and performs
-    # any additional application-specific context fetching before rendering
-    context_loader = models.CharField(max_length=256, default='', blank=True)
-
-    def get_context_loader_function(self):
-        """Returns an imported, callable context loader function.
-        """
-        return import_by_path(self.context_loader)
-
-    def get_context(self, context):
-        """Gets the context for this source by loading it through the source's
-        context loader (if it has one).
-
-        :type context: Dict
-        :param context: A dictionary of context for an event from this
-            source.
-
-        :rtype: Dict
-        :returns: The context provided, with any additional context
-            loaded by the context loader function.
-        """
-        if self.context_loader:
-            return self.get_context_loader_function()(context)
-        else:
-            return context
-
-    def clean(self):
-        """Validation for the model.
-
-        Check that:
-        - the context loader provided maps to an actual loadable function.
-        """
-        if self.context_loader:
-            try:
-                self.get_context_loader_function()
-            except ImproperlyConfigured:
-                raise ValidationError('Must provide a loadable context loader')
-
-    def save(self, *args, **kwargs):
-        """Save the instance to the database after validation.
-        """
-        self.clean()
-        return super(Source, self).save(*args, **kwargs)
 
     def __str__(self):
         """Readable representation of ``Source`` objects."""
@@ -850,6 +823,14 @@ class EventQuerySet(QuerySet):
             EventSeen(event=event, medium=medium) for event in self
         ])
 
+    def load_contexts_and_renderers(self, medium):
+        """
+        Loads context data into the event ``context`` variable. This method
+        destroys the queryset and returns a list of events.
+        """
+        from entity_event import context_loader
+        return context_loader.load_contexts_and_renderers(self, [medium])
+
 
 class EventManager(models.Manager):
     """A custom Manager for Events.
@@ -869,6 +850,13 @@ class EventManager(models.Manager):
         ``events_targets``.
         """
         return self.get_queryset().mark_seen(medium)
+
+    def load_contexts_and_renderers(self, medium):
+        """
+        Loads context data into the event ``context`` variable. This method
+        destroys the queryset and returns a list of events.
+        """
+        return self.get_queryset().load_contexts_and_renderers(medium)
 
     @transaction.atomic
     def create_event(self, actors=None, ignore_duplicates=False, **kwargs):
@@ -890,8 +878,7 @@ class EventManager(models.Manager):
             information about the event, to be serialized into
             JSON. It is possible to load additional context
             dynamically  when events are fetched. See the
-            documentation on the ``context_loader`` field in
-            ``Source``.
+            documentation on the ``ContextRenderer`` model.
 
         :type uuid: str
         :param uuid: A unique string for the event. Requiring a
@@ -972,19 +959,24 @@ class Event(models.Model):
 
     objects = EventManager()
 
-    def get_context(self):
-        """Retrieves and populates the context for this event.
+    def __init__(self, *args, **kwargs):
+        super(Event, self).__init__(*args, **kwargs)
+        # A dictionary that is populated with renderers after the contexts have been
+        # properly loaded. When renderers are available, the 'render' method may be
+        # called with a medium and optional observer
+        self._context_renderers = {}
 
-        At the minimum, whatever context was stored in the event is
-        returned. If the source of the event provides a
-        ``context_loader``, any additional context created by that
-        function will be included.
-
-        :rtype: Dict
-        :returns: A dictionary of the event's context, with any
-            additional context loaded.
+    def render(self, medium, observing_entity=None):
         """
-        return self.source.get_context(self.context)
+        Returns the rendered event as a tuple of text and html content. This information
+        is filled out with respect to which medium is rendering the event, what context
+        renderers are available with the prefetched context, and which optional entity
+        may be observing the rendered event.
+        """
+        if medium not in self._context_renderers:
+            raise RuntimeError('Context and renderer for medium {0} has not or cannot been fetched'.format(medium))
+        else:
+            return self._context_renderers[medium].render_context_to_text_html_templates(self.context)
 
     def __str__(self):
         """Readable representation of ``Event`` objects."""
@@ -1066,3 +1058,142 @@ def _unseen_event_ids(medium):
     unseen_events = Event.objects.raw(query, params=[medium.id])
     ids = [e.id for e in unseen_events]
     return ids
+
+
+@python_2_unicode_compatible
+class RenderingStyle(models.Model):
+    """
+    Defines a rendering style. This is used to group together mediums that have
+    similar rendering styles and allows context renderers to be used across
+    mediums.
+    """
+    name = models.CharField(max_length=64, unique=True)
+    display_name = models.CharField(max_length=64, default='')
+
+    def __str__(self):
+        return self.display_name
+
+
+@python_2_unicode_compatible
+class ContextRenderer(models.Model):
+    """``ContextRenderer`` objects store information about how
+    a source or source group is rendered with a particular rendering style, along with
+    information for loading the render context in a database-efficient
+    manner.
+
+    Of the four template fields: `text_template_path`, 'html_template_path',
+    `text_template`, and `html_template`, at least one must be
+    non-empty. Both a text and html template may be provided, either
+    through a path to the template, or a raw template object.
+    If both are provided, the template given in the path will be used and
+    the text template will be ignored.
+
+    This object is linked to a `RenderingStyle` object. This is how the
+    context renderer is associated with various `Medium` objects. It also
+    provides the `source` that uses the renderer. If a `source_group` is specified,
+    all sources under that group use this context renderer for the rendering style.
+
+    The `context_hints` provide the ability to fetch model IDs of an event context that
+    are stored in the database. For example, if an event context has a `user` key that
+    points to the PK of a Django `User` model, the context hints for it would be specified
+    as follows:
+
+    .. code-block:: python
+
+        {
+            'user': {
+                'app_name': 'auth',
+                'model_name': 'User',
+            }
+        }
+
+    With these hints, the 'user' field in the event context will be treated as a PK in the
+    database and fetched appropriately. If one wishes to perform and prefetch or select_related
+    calls, the following options can be added:
+
+    .. code-block:: python
+
+        {
+            'user': {
+                'app_name': 'auth',
+                'model_name': 'User',
+                'select_related': ['foreign_key_field', 'one_to_one_field'],
+                'prefetch_related': ['reverse_foreign_key_field', 'many_to_many_field'],
+            }
+        }
+
+    Note that as many keys can be defined that have corresponding keys in the event context for
+    the particular source or source group. Also note that the keys in the event context can
+    be embedded anywhere in the context and can also point to a list of PKs. For example:
+
+    .. code-block:: python
+
+        {
+            'my_context': {
+                'user': [1, 3, 5, 10],
+                'other_context_info': 'other_info_string',
+            },
+            'more_context': {
+                'hello': 'world',
+            }
+        }
+
+    In the above case, `User` objects with the PKs 1, 3, 5, and 10 will be fetched and loaded into
+    the event context whenever rendering is performed.
+    """
+    name = models.CharField(max_length=64, unique=True)
+
+    # The various templates that can be used for rendering
+    text_template_path = models.CharField(max_length=256, default='')
+    html_template_path = models.CharField(max_length=256, default='')
+    text_template = models.TextField(default='')
+    html_template = models.TextField(default='')
+
+    # The source or source group of the event. It can only be one or the other
+    source = models.ForeignKey(Source, null=True)
+    source_group = models.ForeignKey(SourceGroup, null=True)
+
+    # The rendering style. Used to associated it with a medium
+    rendering_style = models.ForeignKey(RenderingStyle)
+
+    # Containts hints on how to fetch the context from the database
+    context_hints = jsonfield.JSONField(null=True, default=None)
+
+    class Meta:
+        unique_together = ('source', 'rendering_style')
+
+    def get_sources(self):
+        return [self.source] if self.source_id else self.source_group.source_set.all()
+
+    def __str__(self):
+        return self.name
+
+    def render_text_or_html_template(self, context, is_text=True):
+        """
+        Renders a text or html template based on either the template path or the
+        stored template.
+        """
+        template_path = getattr(self, '{0}_template_path'.format('text' if is_text else 'html'))
+        template = getattr(self, '{0}_template'.format('text' if is_text else 'html'))
+        if template_path:
+            return render_to_string(template_path, context)
+        elif template:
+            return Template(template).render(Context(context))
+        else:
+            return ''
+
+    def render_context_to_text_html_templates(self, context):
+        """Render the templates with the provided context.
+
+        Args:
+          A loaded context.
+
+        Returns:
+          A tuple of (rendered_text, rendered_html). Either, but not both
+          may be an empty string.
+        """
+        # Process text template:
+        return (
+            self.render_text_or_html_template(context, is_text=True).strip(),
+            self.render_text_or_html_template(context, is_text=False).strip(),
+        )

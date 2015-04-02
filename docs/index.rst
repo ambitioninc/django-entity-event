@@ -1,7 +1,7 @@
 Django Entity Event
 ===================
 
-Django Entity Event is a framework for storing events, managing users
+Django Entity Event is a framework for storing and rendering events, managing users
 subscriptions to those events, and providing clean ways to make
 notifying users as easy as possible. It builds on the `Django
 Entity's`_ powerful method of unifying individuals and groups into a
