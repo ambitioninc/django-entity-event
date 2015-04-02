@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+v0.3.1
+------
+
+* Fixes a bug where contexts can have any numeric type as a pk
+
+v0.3.0
+------
+
+* Adds a template and context rendering system to entity event
+
 v0.2
 ----
 

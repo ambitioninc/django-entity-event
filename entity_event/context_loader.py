@@ -2,6 +2,7 @@
 A module for loading contexts using context hints.
 """
 from collections import defaultdict
+import six
 
 from django.db.models import Q
 from django.db.models.loading import get_model
@@ -96,6 +97,7 @@ def get_model_ids_to_fetch(events, context_hints_per_source):
         ...
     }
     """
+    number_types = (complex, float) + six.integer_types
     model_ids_to_fetch = defaultdict(set)
 
     for event in events:
@@ -104,7 +106,7 @@ def get_model_ids_to_fetch(events, context_hints_per_source):
             for d, value in dict_find(event.context, context_key):
                 values = value if isinstance(value, list) else [value]
                 model_ids_to_fetch[get_model(hints['app_name'], hints['model_name'])].update(
-                    v for v in values if isinstance(v, int)
+                    v for v in values if isinstance(v, number_types)
                 )
 
     return model_ids_to_fetch
