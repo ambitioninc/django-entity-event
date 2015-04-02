@@ -9,7 +9,7 @@ env:
   matrix:
     - DJANGO=1.6.11
 install:
-  - pip install -q coveralls coverage flake8 Django==$DJANGO
+  - pip install -q coverage flake8 Django==$DJANGO
   - pip install -r requirements/docs.txt
 before_script:
   - psql -c 'CREATE DATABASE entity_event;' -U postgres
@@ -19,5 +19,3 @@ script:
   - coverage report --fail-under=100
   - python setup.py install
   - cd docs && make html
-after_success:
-  coveralls

@@ -1,9 +1,6 @@
 .. image:: https://travis-ci.org/ambitioninc/django-entity-event.png
    :target: https://travis-ci.org/ambitioninc/django-entity-event
 
-.. image:: https://coveralls.io/repos/ambitioninc/django-entity-event/badge.png?branch=develop
-    :target: https://coveralls.io/r/ambitioninc/django-entity-event?branch=develop
-
 .. image:: https://pypip.in/v/django-entity-event/badge.png
     :target: https://crate.io/packages/django-entity-event/
     :alt: Latest PyPI version
