@@ -32,10 +32,10 @@ To install the latest code directly from source, type::
     pip install git+git://github.com/ambitioninc/django-entity-event.git
 
 Documentation
-=============
+-------------
 
 Full documentation is available at http://django-entity-event.readthedocs.org
 
 License
-=======
+-------
 MIT License (see LICENSE)
