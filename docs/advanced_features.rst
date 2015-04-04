@@ -116,10 +116,52 @@ more complex renderings such as emails with special styling. For more advanced o
 to perform prefetch and select_relateds in the fetched contexts,
 view :py:class:`~entity_event.models.ContextRenderer`.
 
-If you would like to tailor your templates to your mediums even more, mediums have an ``additional_context``
-field that will be merged in with the context of every event rendering. This allows mediums to use the
-same rendering styles but pass flags to change subtle things in the renderings, such as headers, displaying
-the names of people, etc.
+Advanced Template Rendering Options
+-----------------------------------
+
+Along with the basic rendering capabilities, Django Entity Event comes with several other options
+and configurations for making rendering more robust.
+
+Doing Prefetch and Select Related on Contexts
++++++++++++++++++++++++++++++++++++++++++++++
+
+If you need to fetch additional relationships related to the model objects in the context data, a
+``select_related`` key with a list of arguments can be provided to the key. The same is true for
+``prefetch_related`` arguments as well. For example:
+
+.. code-block:: python
+
+    context_hints = {
+        'account': {
+            'app_name': 'my_account_app',
+            'model_name': 'Account',
+            'select_related': ['user'],  # Select the user object in the account model
+            'prefetch_related': ['user__groups'],  # Prefetch user groups related to the account model
+        }
+    }
+
+Note that other context loads can provide additional arguments to ``select_related`` and ``prefetch_related``.
+Additional arguments provided by other context loaders will simply be unioned together when loading
+contexts of all events at once.
+
+Passing Additional Context to Templates
++++++++++++++++++++++++++++++++++++++++
+
+Sometimes mediums need to have subtle differences in the rendering of their contexts. For example, headers
+might need to be added above and below a message or images might need to be displayed. For cases such as
+this, mediums come with an ``additional_context`` variable. Anything in this variable will always be
+passed into the context when events are rendered for that particular medium.
+
+Using a Default Rendering Style
++++++++++++++++++++++++++++++++
+
+It can be cumbersome to set up context renderers for every particular rendering style when it isn't
+necessary. For example, sometimes tailored emails need a special rendering style, however, many events
+can be rendered in an email just fine with a simpler rendering style. For these cases, a user can set
+a Django setting called ``DEFAULT_ENTITY_EVENT_RENDERING_STYLE`` that points to the name of the
+default rendering style to use. If this variable is set and an appropriate context loader cannot
+be fetched for an event during rendering, the default rendering style will be used instead for
+that event (if it has been configured).
 
 Customizing Only-Following Behavior
 -----------------------------------
