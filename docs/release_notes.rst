@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+v0.3.2
+------
+
+* Added an additional_context field in the Medium object that allows passing of additional context to event renderings.
+
 v0.3.1
 ------
 
