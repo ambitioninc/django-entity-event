@@ -4,6 +4,7 @@ A module for loading contexts using context hints.
 from collections import defaultdict
 import six
 
+from django.conf import settings
 from django.db.models import Q
 from django.db.models.loading import get_model
 from manager_utils import id_dict
@@ -148,24 +149,48 @@ def load_fetched_objects_into_contexts(events, model_data, context_hints_per_sou
                     d[context_key] = model_data[model].get(value)
 
 
-def load_renderers_into_events(events, mediums, context_renderers):
+def load_renderers_into_events(events, mediums, context_renderers, default_rendering_style):
     """
     Given the events and the context renderers, load the renderers into the event objects
     so that they may be able to call the 'render' method later on.
     """
-    mediums_per_rendering_style = defaultdict(list)
-    for medium in mediums:
-        mediums_per_rendering_style[medium.rendering_style_id].append(medium)
+    # Make a mapping of source groups and rendering styles to context renderers. Do
+    # the same for sources and rendering styles to context renderers
+    source_group_style_to_renderer = {
+        (cr.source_group_id, cr.rendering_style_id): cr
+        for cr in context_renderers if cr.source_group_id
+    }
+    source_style_to_renderer = {
+        (cr.source_id, cr.rendering_style_id): cr
+        for cr in context_renderers if cr.source_id
+    }
 
-    medium_renderers_per_source = defaultdict(dict)
-    for renderer in context_renderers:
-        for medium in mediums_per_rendering_style[renderer.rendering_style_id]:
-            for source in renderer.get_sources():
-                medium_renderers_per_source[source.id][medium] = renderer
+    for e in events:
+        for m in mediums:
+            # Try the following when loading a context renderer for a medium in an event.
+            # 1. Try to look up the renderer based on the source group and medium rendering style
+            # 2. If step 1 doesn't work, look up based on the source and medium rendering style
+            # 3. If step 2 doesn't work, look up based on the source group and default rendering style
+            # 4. if step 3 doesn't work, look up based on the source and default rendering style
+            # If none of those steps work, this event will not be able to be rendered for the mediun
+            cr = source_group_style_to_renderer.get((e.source.group_id, m.rendering_style_id))
+            if not cr:
+                cr = source_style_to_renderer.get((e.source_id, m.rendering_style_id))
+            if not cr and default_rendering_style:
+                cr = source_group_style_to_renderer.get((e.source.group_id, default_rendering_style.id))
+            if not cr and default_rendering_style:
+                cr = source_style_to_renderer.get((e.source_id, default_rendering_style.id))
 
-    for event in events:
-        for medium, renderer in medium_renderers_per_source[event.source_id].items():
-            event._context_renderers[medium] = renderer
+            if cr:
+                e._context_renderers[m] = cr
+
+
+def get_default_rendering_style():
+    default_rendering_style = getattr(settings, 'DEFAULT_ENTITY_EVENT_RENDERING_STYLE', None)
+    if default_rendering_style:
+        default_rendering_style = get_model('entity_event', 'RenderingStyle').objects.get(name=default_rendering_style)
+
+    return default_rendering_style
 
 
 def load_contexts_and_renderers(events, mediums):
@@ -173,17 +198,23 @@ def load_contexts_and_renderers(events, mediums):
     Given a list of events and mediums, load the context model data into the contexts of the events.
     """
     sources = {event.source for event in events}
-    rendering_styles = {medium.rendering_style for medium in mediums}
+    rendering_styles = {medium.rendering_style for medium in mediums if medium.rendering_style}
+
+    # Fetch the default rendering style and add it to the set of rendering styles
+    default_rendering_style = get_default_rendering_style()
+    if default_rendering_style:
+        rendering_styles.add(default_rendering_style)
+
     context_renderers = ContextRenderer.objects.filter(
         Q(source__in=sources, rendering_style__in=rendering_styles) |
         Q(source_group_id__in=[s.group_id for s in sources], rendering_style__in=rendering_styles)).select_related(
-            'source').prefetch_related('source_group__source_set')
+            'source', 'rendering_style').prefetch_related('source_group__source_set')
 
     context_hints_per_source = get_context_hints_per_source(context_renderers)
     model_querysets = get_querysets_for_context_hints(context_hints_per_source)
     model_ids_to_fetch = get_model_ids_to_fetch(events, context_hints_per_source)
     model_data = fetch_model_data(model_querysets, model_ids_to_fetch)
     load_fetched_objects_into_contexts(events, model_data, context_hints_per_source)
-    load_renderers_into_events(events, mediums, context_renderers)
+    load_renderers_into_events(events, mediums, context_renderers, default_rendering_style)
 
     return events

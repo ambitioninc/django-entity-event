@@ -55,12 +55,31 @@ class Medium(models.Model):
     with the medium. Any associated ``ContextRenderer`` models defined with
     that rendering style will be used to render events in the ``render`` method
     of the medium. This is an optional part of Entity Event's built-in
-    rendering system.
+    rendering system. If a rendering style is not set up for a particular source or
+    source group, it will try to use the default rendering style specified
+    in settings.
+
+    A medium can also provided ``additional_context`` that will always be passed
+    to the templates of its rendered events. This allows for medium-specific rendering
+    styles to be used. For example, perhaps a medium wishes to display a short description
+    of an event but does not wish to display the names of the event actors since those
+    names are already displayed in other places on the page. In this case, the medium
+    can always pass additional context to suppress rendering of names.
     """
+    # A name and display name for the medium along with a description for any
+    # application display
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
+
+    # The rendering style determines the primary way the medium will try to render events.
+    # If a context loader has been defined for this rendering style along with the appropriate
+    # source, the renderer will be used. If a context renderer has not been set up with this
+    # rendering style, it will try to use the default style configured in settings.
     rendering_style = models.ForeignKey('RenderingStyle', null=True)
+
+    # These values are passed in as additional context to whatever event is being rendered.
+    additional_context = jsonfield.JSONField(null=True, default=None)
 
     def __str__(self):
         """Readable representation of ``Medium`` objects."""
@@ -966,6 +985,18 @@ class Event(models.Model):
         # called with a medium and optional observer
         self._context_renderers = {}
 
+    def _merge_medium_additional_context_with_context(self, medium):
+        """
+        If the medium has additional context properties, merge those together here in the
+        main context before rendering.
+        """
+        if medium.additional_context:
+            context = self.context.copy()
+            context.update(medium.additional_context)
+            return context
+        else:
+            return self.context
+
     def render(self, medium, observing_entity=None):
         """
         Returns the rendered event as a tuple of text and html content. This information
@@ -976,7 +1007,8 @@ class Event(models.Model):
         if medium not in self._context_renderers:
             raise RuntimeError('Context and renderer for medium {0} has not or cannot been fetched'.format(medium))
         else:
-            return self._context_renderers[medium].render_context_to_text_html_templates(self.context)
+            context = self._merge_medium_additional_context_with_context(medium)
+            return self._context_renderers[medium].render_context_to_text_html_templates(context)
 
     def __str__(self):
         """Readable representation of ``Event`` objects."""

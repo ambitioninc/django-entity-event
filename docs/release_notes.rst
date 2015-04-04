@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+v0.3.2
+------
+
+* Added an additional_context field in the Medium object that allows passing of additional context to event renderings.
+
+* Added ability to define a default rendering style for all sources or source groups if a context renderer is not defined for a particular rendering style.
+
 v0.3.1
 ------
 
