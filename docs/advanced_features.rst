@@ -126,7 +126,8 @@ Doing Prefetch and Select Related on Contexts
 +++++++++++++++++++++++++++++++++++++++++++++
 
 If you need to fetch additional relationships related to the model objects in the context data, a
-``select_related`` key with a list of arguments can be provided to the key. The same is true for
+``select_related`` key with a list of arguments can be provided to the dictionary of the model
+object you are fetching. The same is true for
 ``prefetch_related`` arguments as well. For example:
 
 .. code-block:: python
