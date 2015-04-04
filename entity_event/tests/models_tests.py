@@ -39,7 +39,7 @@ class EventRenderTest(TestCase):
         txt, html = events[0].render(m)
 
         self.assertEquals(txt, 'Test text template with value 100')
-        self.assertEquals(html, 'Test html template with value 100')
+        self.assertEquals(html, 'Test html template with value suppressed')
 
     def test_one_context_renderer_one_medium(self):
         rg = G(RenderingStyle)
