@@ -473,6 +473,77 @@ class TestLoadRenderersIntoEvents(SimpleTestCase):
             m1: cr2
         })
 
+    def test_mediums_w_source_group_renderers(self):
+        s1 = N(models.Source, id=1, persist_dependencies=False, group=N(models.SourceGroup, id=1))
+        s2 = N(models.Source, id=2, persist_dependencies=False, group=N(models.SourceGroup, id=1))
+        e1 = N(models.Event, context={}, source=s1, persist_dependencies=False)
+        e2 = N(models.Event, context={}, source=s2, persist_dependencies=False)
+        rs1 = N(models.RenderingStyle, id=1, persist_dependencies=False)
+        rs2 = N(models.RenderingStyle, id=2, persist_dependencies=False)
+        m1 = N(models.Medium, id=1, rendering_style=rs1, persist_dependencies=False)
+        m2 = N(models.Medium, id=2, rendering_style=rs2, persist_dependencies=False)
+        cr1 = N(models.ContextRenderer, source_group=s1.group, rendering_style=rs1, id=1, persist_dependencies=False)
+        cr2 = N(models.ContextRenderer, source_group=s1.group, rendering_style=rs2, id=2, persist_dependencies=False)
+
+        context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2], None)
+
+        self.assertEquals(e1._context_renderers, {
+            m1: cr1,
+            m2: cr2,
+        })
+        self.assertEquals(e2._context_renderers, {
+            m1: cr1,
+            m2: cr2,
+        })
+
+    def test_mediums_w_source_group_renderers_default(self):
+        s1 = N(models.Source, id=1, persist_dependencies=False, group=N(models.SourceGroup, id=1))
+        s2 = N(models.Source, id=2, persist_dependencies=False, group=N(models.SourceGroup, id=1))
+        e1 = N(models.Event, context={}, source=s1, persist_dependencies=False)
+        e2 = N(models.Event, context={}, source=s2, persist_dependencies=False)
+        rs1 = N(models.RenderingStyle, id=1, persist_dependencies=False)
+        rs2 = N(models.RenderingStyle, id=2, persist_dependencies=False)
+        m1 = N(models.Medium, id=1, rendering_style=rs2, persist_dependencies=False)
+        m2 = N(models.Medium, id=2, rendering_style=rs2, persist_dependencies=False)
+        cr1 = N(models.ContextRenderer, source_group=s1.group, rendering_style=rs1, id=1, persist_dependencies=False)
+
+        context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1], rs1)
+
+        self.assertEquals(e1._context_renderers, {
+            m1: cr1,
+            m2: cr1,
+        })
+        self.assertEquals(e2._context_renderers, {
+            m1: cr1,
+            m2: cr1,
+        })
+
+    def test_mediums_w_renderers_default_source(self):
+        s1 = N(models.Source, id=1, persist_dependencies=False)
+        s2 = N(models.Source, id=2, persist_dependencies=False)
+        e1 = N(models.Event, context={}, source=s1, persist_dependencies=False)
+        e2 = N(models.Event, context={}, source=s2, persist_dependencies=False)
+        rs1 = N(models.RenderingStyle, id=1, persist_dependencies=False)
+        rs2 = N(models.RenderingStyle, id=2, persist_dependencies=False)
+        m1 = N(models.Medium, id=1, rendering_style=rs1, persist_dependencies=False)
+        m2 = N(models.Medium, id=2, rendering_style=rs1, persist_dependencies=False)
+        cr1 = N(models.ContextRenderer, source=s1, rendering_style=rs1, id=1, persist_dependencies=False)
+        cr2 = N(models.ContextRenderer, source=s2, rendering_style=rs1, id=2, persist_dependencies=False)
+        cr3 = N(models.ContextRenderer, source=s1, rendering_style=rs2, id=3, persist_dependencies=False)
+
+        default_style = rs1
+
+        context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2, cr3], default_style)
+
+        self.assertEquals(e1._context_renderers, {
+            m1: cr1,
+            m2: cr1,
+        })
+        self.assertEquals(e2._context_renderers, {
+            m1: cr2,
+            m2: cr2,
+        })
+
 
 class LoadContextsAndRenderersTest(TestCase):
     """
