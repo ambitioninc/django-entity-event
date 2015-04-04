@@ -112,10 +112,14 @@ Event.
 
 With the notion of rendering styles, the notification medium and any medium that can display short
 messages can utilize the renderings of the events. Other rendering styles can still be made for
-more complex renderings such as emails with special styling.
-
-For more advanced options on how to perform prefetch and select_relateds in the fetched contexts,
+more complex renderings such as emails with special styling. For more advanced options on how
+to perform prefetch and select_relateds in the fetched contexts,
 view :py:class:`~entity_event.models.ContextRenderer`.
+
+If you would like to tailor your templates to your mediums even more, mediums have an ``additional_context``
+field that will be merged in with the context of every event rendering. This allows mediums to use the
+same rendering styles but pass flags to change subtle things in the renderings, such as headers, displaying
+the names of people, etc.
 
 Customizing Only-Following Behavior
 -----------------------------------
