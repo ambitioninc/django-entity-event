@@ -8,6 +8,16 @@ from entity_event import models
 from entity_event.tests import models as test_models
 
 
+class TestGetDefaultRenderingStyle(TestCase):
+    def test_none_defined(self):
+        self.assertIsNone(context_loader.get_default_rendering_style())
+
+    @override_settings(DEFAULT_ENTITY_EVENT_RENDERING_STYLE='short')
+    def test_defined(self):
+        rs = G(models.RenderingStyle, name='short')
+        self.assertEquals(context_loader.get_default_rendering_style(), rs)
+
+
 class TestGetContextHintsFromSource(SimpleTestCase):
     def test_no_context_renderers(self):
         res = context_loader.get_context_hints_per_source([])
