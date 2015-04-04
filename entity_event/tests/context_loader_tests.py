@@ -1,4 +1,5 @@
 from django.test import SimpleTestCase, TestCase
+from django.test.utils import override_settings
 from django_dynamic_fixture import N, G
 from mock import patch
 
@@ -430,13 +431,13 @@ class LoadFetchedObjectsIntoContextsTest(SimpleTestCase):
 class TestLoadRenderersIntoEvents(SimpleTestCase):
     def test_no_mediums_or_renderers(self):
         events = [N(models.Event, context={}, persist_dependencies=False)]
-        context_loader.load_renderers_into_events(events, [], [])
+        context_loader.load_renderers_into_events(events, [], [], None)
         self.assertEquals(events[0]._context_renderers, {})
 
     def test_mediums_and_no_renderers(self):
         events = [N(models.Event, context={}, persist_dependencies=False)]
         mediums = [N(models.Medium, persist_dependencies=False)]
-        context_loader.load_renderers_into_events(events, mediums, [])
+        context_loader.load_renderers_into_events(events, mediums, [], None)
         self.assertEquals(events[0]._context_renderers, {})
 
     def test_mediums_w_renderers(self):
@@ -452,7 +453,7 @@ class TestLoadRenderersIntoEvents(SimpleTestCase):
         cr2 = N(models.ContextRenderer, source=s2, rendering_style=rg1, id=2, persist_dependencies=False)
         cr3 = N(models.ContextRenderer, source=s1, rendering_style=rg2, id=3, persist_dependencies=False)
 
-        context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2, cr3])
+        context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2, cr3], None)
 
         self.assertEquals(e1._context_renderers, {
             m1: cr1,
@@ -482,6 +483,23 @@ class LoadContextsAndRenderersTest(TestCase):
         e = G(models.Event, context={'key': m1.id}, source=s)
         medium = G(models.Medium, source=s, rendering_style=rg)
         G(models.ContextRenderer, rendering_style=rg, source=s, context_hints={
+            'key': {
+                'model_name': 'TestModel',
+                'app_name': 'tests',
+            }
+        })
+
+        context_loader.load_contexts_and_renderers([e], [medium])
+        self.assertEquals(e.context, {'key': m1})
+
+    @override_settings(DEFAULT_ENTITY_EVENT_RENDERING_STYLE='short')
+    def test_one_render_target_one_event_no_style_with_default(self):
+        m1 = G(test_models.TestModel)
+        s = G(models.Source)
+        rs = G(models.RenderingStyle, name='short')
+        e = G(models.Event, context={'key': m1.id}, source=s)
+        medium = G(models.Medium, source=s, rendering_style=None)
+        G(models.ContextRenderer, rendering_style=rs, source=s, context_hints={
             'key': {
                 'model_name': 'TestModel',
                 'app_name': 'tests',
@@ -543,6 +561,70 @@ class LoadContextsAndRenderersTest(TestCase):
             medium2: cr2,
         })
         self.assertEquals(e4._context_renderers, {
+            medium2: cr2,
+        })
+
+    @override_settings(DEFAULT_ENTITY_EVENT_RENDERING_STYLE='short')
+    def test_multiple_render_targets_multiple_events_use_default(self):
+        """
+        Tests the case when a context renderer is not available for a rendering style
+        but the default style is used instead.
+        """
+        test_m1 = G(test_models.TestModel)
+        test_m2 = G(test_models.TestModel)
+        test_m3 = G(test_models.TestModel)
+        test_fk_m1 = G(test_models.TestFKModel)
+        test_fk_m2 = G(test_models.TestFKModel)
+        s1 = G(models.Source)
+        s2 = G(models.Source)
+        rs1 = G(models.RenderingStyle, name='short')
+        rs2 = G(models.RenderingStyle)
+        medium1 = G(models.Medium, rendering_style=rs1)
+        medium2 = G(models.Medium, rendering_style=rs2)
+
+        cr1 = G(models.ContextRenderer, rendering_style=rs1, source=s1, context_hints={
+            'key': {
+                'model_name': 'TestModel',
+                'app_name': 'tests',
+            }
+        })
+        cr2 = G(models.ContextRenderer, rendering_style=rs1, source=s2, context_hints={
+            'key': {
+                'model_name': 'TestModel',
+                'app_name': 'tests',
+            },
+            'key2': {
+                'model_name': 'TestFKModel',
+                'app_name': 'tests',
+            }
+        })
+
+        e1 = G(models.Event, context={'key': test_m1.id, 'key2': 'haha'}, source=s1)
+        e2 = G(models.Event, context={'key': [test_m2.id, test_m3.id]}, source=s1)
+        e3 = G(models.Event, context={'key2': test_fk_m1.id, 'key': test_m1.id}, source=s2)
+        e4 = G(models.Event, context={'key2': test_fk_m2.id}, source=s2)
+
+        context_loader.load_contexts_and_renderers([e1, e2, e3, e4], [medium1, medium2])
+        self.assertEquals(e1.context, {'key': test_m1, 'key2': 'haha'})
+        self.assertEquals(e2.context, {'key': [test_m2, test_m3]})
+        self.assertEquals(e3.context, {'key2': test_fk_m1, 'key': test_m1})
+        self.assertEquals(e4.context, {'key2': test_fk_m2})
+
+        # Verify context renderers are put into the events properly
+        self.assertEquals(e1._context_renderers, {
+            medium1: cr1,
+            medium2: cr1,
+        })
+        self.assertEquals(e2._context_renderers, {
+            medium1: cr1,
+            medium2: cr1,
+        })
+        self.assertEquals(e3._context_renderers, {
+            medium1: cr2,
+            medium2: cr2,
+        })
+        self.assertEquals(e4._context_renderers, {
+            medium1: cr2,
             medium2: cr2,
         })
 
