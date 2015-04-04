@@ -1,1 +1,1 @@
-Test html template with value {{ fk_model.value }}
+Test html template with value {% if suppress_value != False %}{{ fk_model.value }}{% else %}suppressed{% endif %}

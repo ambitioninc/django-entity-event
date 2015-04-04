@@ -19,6 +19,28 @@ class EventRenderTest(TestCase):
     """
     Does an entire integration test for rendering events relative to mediums.
     """
+    def test_one_context_renderer_one_medium_w_additional_context(self):
+        rg = G(RenderingStyle)
+        s = G(Source)
+        G(
+            ContextRenderer, source=s, rendering_style=rg, text_template_path='test_template.txt',
+            html_template_path='test_template.html', context_hints={
+                'fk_model': {
+                    'app_name': 'tests',
+                    'model_name': 'TestFKModel',
+                }
+            })
+        m = G(Medium, rendering_style=rg, additional_context={'suppress_value': True})
+
+        fkm = G(TestFKModel, value=100)
+        G(Event, source=s, context={'fk_model': fkm.id})
+
+        events = Event.objects.all().load_contexts_and_renderers(m)
+        txt, html = events[0].render(m)
+
+        self.assertEquals(txt, 'Test text template with value 100')
+        self.assertEquals(html, 'Test html template with value 100')
+
     def test_one_context_renderer_one_medium(self):
         rg = G(RenderingStyle)
         s = G(Source)
