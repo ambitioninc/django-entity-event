@@ -60,10 +60,9 @@ Building the docs
 
 When in the project directory::
 
-    $ pip install -r requirements/docs.txt
-    $ pip uninstall -y django-entity-event && python setup.py install
-    $ cd docs && make html
-    $ open docs/_build/html/index.html
+    pip install -r requirements/docs.txt
+    python setup.py build_sphinx
+    open docs/_build/html/index.html
 
 Release Checklist
 -----------------
@@ -73,7 +72,10 @@ Before a new release, please go through the following checklist:
 * Bump version in entity_event/version.py
 * Add a release note in docs/release_notes.rst
 * Git tag the version
-* Upload to pypi
+* Upload to pypi::
+
+    pip install wheel
+    python setup.py sdist bdist_wheel upload
 
 Vulnerability Reporting
 -----------------------

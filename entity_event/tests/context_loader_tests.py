@@ -25,7 +25,7 @@ class TestGetContextHintsFromSource(SimpleTestCase):
 
     @patch.object(models.ContextRenderer, 'get_sources', spec_set=True)
     def test_one_context_renderer(self, mock_get_sources):
-        source = N(models.Source, persist_dependencies=False)
+        source = N(models.Source, id=1)
         mock_get_sources.return_value = [source]
         res = context_loader.get_context_hints_per_source([
             N(models.ContextRenderer, source=source, context_hints={
@@ -287,7 +287,7 @@ class GetModelIdsToFetchTest(SimpleTestCase):
         self.assertEquals(context_loader.get_model_ids_to_fetch([], {}), {})
 
     def test_no_context_hints(self):
-        e = N(models.Event, context={}, persist_dependencies=False)
+        e = N(models.Event, id=1, context={})
         self.assertEquals(context_loader.get_model_ids_to_fetch([e], {}), {})
 
     def test_w_one_event_one_context_hint_single_pk(self):
@@ -402,7 +402,7 @@ class LoadFetchedObjectsIntoContextsTest(SimpleTestCase):
         context_loader.load_fetched_objects_into_contexts([], {}, {})
 
     def test_event_with_no_model_data(self):
-        e = N(models.Event, persist_dependencies=False, context={'hi', 'hi'})
+        e = N(models.Event, id=1, context={'hi', 'hi'})
         context_loader.load_fetched_objects_into_contexts([e], {}, {})
         self.assertEquals(e, e)
 

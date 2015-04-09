@@ -8,6 +8,7 @@ env:
     - DB=postgres
   matrix:
     - DJANGO=1.6.11
+    - DJANGO=1.7.7
 install:
   - pip install -q coverage flake8 Django==$DJANGO
   - pip install -r requirements/docs.txt
@@ -18,4 +19,4 @@ script:
   - coverage run setup.py test
   - coverage report --fail-under=100
   - python setup.py install
-  - cd docs && make html
+  - python setup.py build_sphinx
