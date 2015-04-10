@@ -6,6 +6,9 @@ from django.db import models
 
 
 class Migration(SchemaMigration):
+    depends_on = (
+        ('entity', '0006_auto__chg_field_entity_entity_kind'),
+    )
 
     def forwards(self, orm):
         # Adding model 'Medium'
