@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+v0.3.4
+------
+
+* Fixed django-entity migration dependency for Django 1.6
+
 v0.3.3
 ------
 
