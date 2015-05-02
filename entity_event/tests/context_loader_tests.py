@@ -34,7 +34,7 @@ class TestGetContextHintsFromSource(SimpleTestCase):
                     'model_name': 'TestModel',
                     'select_related': ['fk'],
                 },
-            }, persist_dependencies=False)
+            })
         ])
         self.assertEquals(res, {
             source: {
@@ -48,8 +48,8 @@ class TestGetContextHintsFromSource(SimpleTestCase):
         })
 
     def test_multiple_context_renderers_over_multiple_source(self):
-        source1 = N(models.Source, persist_dependencies=False, id=1)
-        source2 = N(models.Source, persist_dependencies=False, id=2)
+        source1 = N(models.Source, id=1)
+        source2 = N(models.Source, id=2)
         res = context_loader.get_context_hints_per_source([
             N(models.ContextRenderer, source=source1, context_hints={
                 'key': {
@@ -58,7 +58,7 @@ class TestGetContextHintsFromSource(SimpleTestCase):
                     'select_related': ['fk'],
                     'prefetch_related': ['prefetch1', 'prefetch2'],
                 },
-            }, persist_dependencies=False),
+            }),
             N(models.ContextRenderer, source=source1, context_hints={
                 'key': {
                     'app_name': 'entity_event.tests',
@@ -66,7 +66,7 @@ class TestGetContextHintsFromSource(SimpleTestCase):
                     'select_related': ['fk1'],
                     'prefetch_related': ['prefetch2', 'prefetch3'],
                 },
-            }, persist_dependencies=False),
+            }),
             N(models.ContextRenderer, source=source2, context_hints={
                 'key2': {
                     'app_name': 'entity_event.tests2',
@@ -74,7 +74,7 @@ class TestGetContextHintsFromSource(SimpleTestCase):
                     'select_related': ['fk2'],
                     'prefetch_related': ['prefetch5', 'prefetch6'],
                 },
-            }, persist_dependencies=False)
+            })
         ])
         self.assertEquals(res, {
             source1: {
@@ -102,7 +102,7 @@ class TestGetQuerysetsForContextHints(SimpleTestCase):
         self.assertEquals(qsets, {})
 
     def test_one_context_hint_no_select_related(self):
-        source = N(models.Source, persist_dependencies=False, id=1)
+        source = N(models.Source, id=1)
         qsets = context_loader.get_querysets_for_context_hints({
             source: {
                 'key': {
@@ -116,7 +116,7 @@ class TestGetQuerysetsForContextHints(SimpleTestCase):
         })
 
     def test_one_context_hint_w_select_related(self):
-        source = N(models.Source, persist_dependencies=False, id=1)
+        source = N(models.Source, id=1)
         qsets = context_loader.get_querysets_for_context_hints({
             source: {
                 'key': {
@@ -137,8 +137,8 @@ class TestGetQuerysetsForContextHints(SimpleTestCase):
         self.assertEquals(str(qsets[test_models.TestModel].query), raw_sql)
 
     def test_multiple_context_hints_w_multiple_select_related(self):
-        source = N(models.Source, persist_dependencies=False, id=1)
-        source2 = N(models.Source, persist_dependencies=False, id=2)
+        source = N(models.Source, id=1)
+        source2 = N(models.Source, id=2)
         qsets = context_loader.get_querysets_for_context_hints({
             source: {
                 'key': {
@@ -168,8 +168,8 @@ class TestGetQuerysetsForContextHints(SimpleTestCase):
         self.assertEquals(str(qsets[test_models.TestModel].query), raw_sql)
 
     def test_multiple_context_hints_w_multiple_select_related_multiple_prefetch_related(self):
-        source = N(models.Source, persist_dependencies=False, id=1)
-        source2 = N(models.Source, persist_dependencies=False, id=2)
+        source = N(models.Source, id=1)
+        source2 = N(models.Source, id=2)
         qsets = context_loader.get_querysets_for_context_hints({
             source: {
                 'key': {
@@ -204,8 +204,8 @@ class TestGetQuerysetsForContextHints(SimpleTestCase):
 
 class TestGetQuerysetsForContextHintsDbTests(TestCase):
     def test_multiple_context_hints_w_multiple_select_related_multiple_prefetch_related(self):
-        source = N(models.Source, persist_dependencies=False, id=1)
-        source2 = N(models.Source, persist_dependencies=False, id=2)
+        source = N(models.Source, id=1)
+        source2 = N(models.Source, id=2)
         qsets = context_loader.get_querysets_for_context_hints({
             source: {
                 'key': {
@@ -291,7 +291,7 @@ class GetModelIdsToFetchTest(SimpleTestCase):
         self.assertEquals(context_loader.get_model_ids_to_fetch([e], {}), {})
 
     def test_w_one_event_one_context_hint_single_pk(self):
-        source = N(models.Source, persist_dependencies=False, id=1)
+        source = N(models.Source, id=1)
         hints = {
             source: {
                 'key': {
@@ -300,13 +300,13 @@ class GetModelIdsToFetchTest(SimpleTestCase):
                 },
             },
         }
-        e = N(models.Event, context={'key': 2}, persist_dependencies=False, source=source)
+        e = N(models.Event, context={'key': 2}, source=source)
         self.assertEquals(context_loader.get_model_ids_to_fetch([e], hints), {
             test_models.TestModel: set([2])
         })
 
     def test_w_one_event_one_context_hint_list_pks(self):
-        source = N(models.Source, persist_dependencies=False, id=1)
+        source = N(models.Source, id=1)
         hints = {
             source: {
                 'key': {
@@ -315,13 +315,13 @@ class GetModelIdsToFetchTest(SimpleTestCase):
                 },
             },
         }
-        e = N(models.Event, context={'key': [2, 3, 5]}, persist_dependencies=False, source=source)
+        e = N(models.Event, context={'key': [2, 3, 5]}, source=source)
         self.assertEquals(context_loader.get_model_ids_to_fetch([e], hints), {
             test_models.TestModel: set([2, 3, 5])
         })
 
     def test_w_multiple_events_one_context_hint_list_pks(self):
-        source = N(models.Source, persist_dependencies=False, id=1)
+        source = N(models.Source, id=1)
         hints = {
             source: {
                 'key': {
@@ -330,15 +330,15 @@ class GetModelIdsToFetchTest(SimpleTestCase):
                 },
             },
         }
-        e1 = N(models.Event, context={'key': [2, 3, 5]}, persist_dependencies=False, source=source)
-        e2 = N(models.Event, context={'key': 88}, persist_dependencies=False, source=source)
+        e1 = N(models.Event, context={'key': [2, 3, 5]}, source=source)
+        e2 = N(models.Event, context={'key': 88}, source=source)
         self.assertEquals(context_loader.get_model_ids_to_fetch([e1, e2], hints), {
             test_models.TestModel: set([2, 3, 5, 88])
         })
 
     def test_w_multiple_events_multiple_context_hints_list_pks(self):
-        source1 = N(models.Source, persist_dependencies=False, id=1)
-        source2 = N(models.Source, persist_dependencies=False, id=2)
+        source1 = N(models.Source, id=1)
+        source2 = N(models.Source, id=2)
         hints = {
             source1: {
                 'key': {
@@ -357,10 +357,10 @@ class GetModelIdsToFetchTest(SimpleTestCase):
                 },
             },
         }
-        e1 = N(models.Event, context={'key': [2, 3, 5]}, persist_dependencies=False, source=source1)
-        e2 = N(models.Event, context={'key': 88}, persist_dependencies=False, source=source1)
-        e3 = N(models.Event, context={'key': 100, 'key2': [50]}, persist_dependencies=False, source=source2)
-        e4 = N(models.Event, context={'key2': [60]}, persist_dependencies=False, source=source2)
+        e1 = N(models.Event, context={'key': [2, 3, 5]}, source=source1)
+        e2 = N(models.Event, context={'key': 88}, source=source1)
+        e3 = N(models.Event, context={'key': 100, 'key2': [50]}, source=source2)
+        e4 = N(models.Event, context={'key2': [60]}, source=source2)
         self.assertEquals(context_loader.get_model_ids_to_fetch([e1, e2, e3, e4], hints), {
             test_models.TestModel: set([2, 3, 5, 88, 100]),
             test_models.TestFKModel: set([50, 60])
@@ -407,8 +407,8 @@ class LoadFetchedObjectsIntoContextsTest(SimpleTestCase):
         self.assertEquals(e, e)
 
     def test_one_event_w_model_data(self):
-        m = N(test_models.TestModel, persist_dependencies=False, id=2)
-        s = N(models.Source, persist_dependencies=False, id=1)
+        m = N(test_models.TestModel, id=2)
+        s = N(models.Source, id=1)
         hints = {
             s: {
                 'key': {
@@ -417,14 +417,14 @@ class LoadFetchedObjectsIntoContextsTest(SimpleTestCase):
                 }
             }
         }
-        e = N(models.Event, persist_dependencies=False, context={'key': m.id}, source=s)
+        e = N(models.Event, context={'key': m.id}, source=s)
         context_loader.load_fetched_objects_into_contexts([e], {test_models.TestModel: {m.id: m}}, hints)
         self.assertEquals(e.context, {'key': m})
 
     def test_one_event_w_list_model_data(self):
-        m1 = N(test_models.TestModel, persist_dependencies=False, id=2)
-        m2 = N(test_models.TestModel, persist_dependencies=False, id=3)
-        s = N(models.Source, persist_dependencies=False, id=1)
+        m1 = N(test_models.TestModel, id=2)
+        m2 = N(test_models.TestModel, id=3)
+        s = N(models.Source, id=1)
         hints = {
             s: {
                 'key': {
@@ -433,35 +433,35 @@ class LoadFetchedObjectsIntoContextsTest(SimpleTestCase):
                 }
             }
         }
-        e = N(models.Event, persist_dependencies=False, context={'key': [m1.id, m2.id]}, source=s)
+        e = N(models.Event, context={'key': [m1.id, m2.id]}, source=s)
         context_loader.load_fetched_objects_into_contexts([e], {test_models.TestModel: {m1.id: m1, m2.id: m2}}, hints)
         self.assertEquals(e.context, {'key': [m1, m2]})
 
 
 class TestLoadRenderersIntoEvents(SimpleTestCase):
     def test_no_mediums_or_renderers(self):
-        events = [N(models.Event, context={}, persist_dependencies=False)]
+        events = [N(models.Event, context={})]
         context_loader.load_renderers_into_events(events, [], [], None)
         self.assertEquals(events[0]._context_renderers, {})
 
     def test_mediums_and_no_renderers(self):
-        events = [N(models.Event, context={}, persist_dependencies=False)]
-        mediums = [N(models.Medium, persist_dependencies=False)]
+        events = [N(models.Event, context={})]
+        mediums = [N(models.Medium)]
         context_loader.load_renderers_into_events(events, mediums, [], None)
         self.assertEquals(events[0]._context_renderers, {})
 
     def test_mediums_w_renderers(self):
-        s1 = N(models.Source, id=1, persist_dependencies=False)
-        s2 = N(models.Source, id=2, persist_dependencies=False)
-        e1 = N(models.Event, context={}, source=s1, persist_dependencies=False)
-        e2 = N(models.Event, context={}, source=s2, persist_dependencies=False)
-        rg1 = N(models.RenderingStyle, id=1, persist_dependencies=False)
-        rg2 = N(models.RenderingStyle, id=2, persist_dependencies=False)
-        m1 = N(models.Medium, id=1, rendering_style=rg1, persist_dependencies=False)
-        m2 = N(models.Medium, id=2, rendering_style=rg2, persist_dependencies=False)
-        cr1 = N(models.ContextRenderer, source=s1, rendering_style=rg1, id=1, persist_dependencies=False)
-        cr2 = N(models.ContextRenderer, source=s2, rendering_style=rg1, id=2, persist_dependencies=False)
-        cr3 = N(models.ContextRenderer, source=s1, rendering_style=rg2, id=3, persist_dependencies=False)
+        s1 = N(models.Source, id=1)
+        s2 = N(models.Source, id=2)
+        e1 = N(models.Event, context={}, source=s1)
+        e2 = N(models.Event, context={}, source=s2)
+        rg1 = N(models.RenderingStyle, id=1)
+        rg2 = N(models.RenderingStyle, id=2)
+        m1 = N(models.Medium, id=1, rendering_style=rg1)
+        m2 = N(models.Medium, id=2, rendering_style=rg2)
+        cr1 = N(models.ContextRenderer, source=s1, rendering_style=rg1, id=1)
+        cr2 = N(models.ContextRenderer, source=s2, rendering_style=rg1, id=2)
+        cr3 = N(models.ContextRenderer, source=s1, rendering_style=rg2, id=3)
 
         context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2, cr3], None)
 
@@ -474,16 +474,16 @@ class TestLoadRenderersIntoEvents(SimpleTestCase):
         })
 
     def test_mediums_w_source_group_renderers(self):
-        s1 = N(models.Source, id=1, persist_dependencies=False, group=N(models.SourceGroup, id=1))
-        s2 = N(models.Source, id=2, persist_dependencies=False, group=N(models.SourceGroup, id=1))
-        e1 = N(models.Event, context={}, source=s1, persist_dependencies=False)
-        e2 = N(models.Event, context={}, source=s2, persist_dependencies=False)
-        rs1 = N(models.RenderingStyle, id=1, persist_dependencies=False)
-        rs2 = N(models.RenderingStyle, id=2, persist_dependencies=False)
-        m1 = N(models.Medium, id=1, rendering_style=rs1, persist_dependencies=False)
-        m2 = N(models.Medium, id=2, rendering_style=rs2, persist_dependencies=False)
-        cr1 = N(models.ContextRenderer, source_group=s1.group, rendering_style=rs1, id=1, persist_dependencies=False)
-        cr2 = N(models.ContextRenderer, source_group=s1.group, rendering_style=rs2, id=2, persist_dependencies=False)
+        s1 = N(models.Source, id=1, group=N(models.SourceGroup, id=1))
+        s2 = N(models.Source, id=2, group=N(models.SourceGroup, id=1))
+        e1 = N(models.Event, context={}, source=s1)
+        e2 = N(models.Event, context={}, source=s2)
+        rs1 = N(models.RenderingStyle, id=1)
+        rs2 = N(models.RenderingStyle, id=2)
+        m1 = N(models.Medium, id=1, rendering_style=rs1)
+        m2 = N(models.Medium, id=2, rendering_style=rs2)
+        cr1 = N(models.ContextRenderer, source_group=s1.group, rendering_style=rs1, id=1)
+        cr2 = N(models.ContextRenderer, source_group=s1.group, rendering_style=rs2, id=2)
 
         context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2], None)
 
@@ -497,15 +497,15 @@ class TestLoadRenderersIntoEvents(SimpleTestCase):
         })
 
     def test_mediums_w_source_group_renderers_default(self):
-        s1 = N(models.Source, id=1, persist_dependencies=False, group=N(models.SourceGroup, id=1))
-        s2 = N(models.Source, id=2, persist_dependencies=False, group=N(models.SourceGroup, id=1))
-        e1 = N(models.Event, context={}, source=s1, persist_dependencies=False)
-        e2 = N(models.Event, context={}, source=s2, persist_dependencies=False)
-        rs1 = N(models.RenderingStyle, id=1, persist_dependencies=False)
-        rs2 = N(models.RenderingStyle, id=2, persist_dependencies=False)
-        m1 = N(models.Medium, id=1, rendering_style=rs2, persist_dependencies=False)
-        m2 = N(models.Medium, id=2, rendering_style=rs2, persist_dependencies=False)
-        cr1 = N(models.ContextRenderer, source_group=s1.group, rendering_style=rs1, id=1, persist_dependencies=False)
+        s1 = N(models.Source, id=1, group=N(models.SourceGroup, id=1))
+        s2 = N(models.Source, id=2, group=N(models.SourceGroup, id=1))
+        e1 = N(models.Event, context={}, source=s1)
+        e2 = N(models.Event, context={}, source=s2)
+        rs1 = N(models.RenderingStyle, id=1)
+        rs2 = N(models.RenderingStyle, id=2)
+        m1 = N(models.Medium, id=1, rendering_style=rs2)
+        m2 = N(models.Medium, id=2, rendering_style=rs2)
+        cr1 = N(models.ContextRenderer, source_group=s1.group, rendering_style=rs1, id=1)
 
         context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1], rs1)
 
@@ -519,17 +519,17 @@ class TestLoadRenderersIntoEvents(SimpleTestCase):
         })
 
     def test_mediums_w_renderers_default_source(self):
-        s1 = N(models.Source, id=1, persist_dependencies=False)
-        s2 = N(models.Source, id=2, persist_dependencies=False)
-        e1 = N(models.Event, context={}, source=s1, persist_dependencies=False)
-        e2 = N(models.Event, context={}, source=s2, persist_dependencies=False)
-        rs1 = N(models.RenderingStyle, id=1, persist_dependencies=False)
-        rs2 = N(models.RenderingStyle, id=2, persist_dependencies=False)
-        m1 = N(models.Medium, id=1, rendering_style=rs1, persist_dependencies=False)
-        m2 = N(models.Medium, id=2, rendering_style=rs1, persist_dependencies=False)
-        cr1 = N(models.ContextRenderer, source=s1, rendering_style=rs1, id=1, persist_dependencies=False)
-        cr2 = N(models.ContextRenderer, source=s2, rendering_style=rs1, id=2, persist_dependencies=False)
-        cr3 = N(models.ContextRenderer, source=s1, rendering_style=rs2, id=3, persist_dependencies=False)
+        s1 = N(models.Source, id=1)
+        s2 = N(models.Source, id=2)
+        e1 = N(models.Event, context={}, source=s1)
+        e2 = N(models.Event, context={}, source=s2)
+        rs1 = N(models.RenderingStyle, id=1)
+        rs2 = N(models.RenderingStyle, id=2)
+        m1 = N(models.Medium, id=1, rendering_style=rs1)
+        m2 = N(models.Medium, id=2, rendering_style=rs1)
+        cr1 = N(models.ContextRenderer, source=s1, rendering_style=rs1, id=1)
+        cr2 = N(models.ContextRenderer, source=s2, rendering_style=rs1, id=2)
+        cr3 = N(models.ContextRenderer, source=s1, rendering_style=rs2, id=3)
 
         default_style = rs1
 

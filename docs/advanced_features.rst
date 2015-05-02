@@ -141,7 +141,7 @@ object you are fetching. The same is true for
         }
     }
 
-Note that other context loads can provide additional arguments to ``select_related`` and ``prefetch_related``.
+Note that other context loaders can provide additional arguments to ``select_related`` and ``prefetch_related``.
 Additional arguments provided by other context loaders will simply be unioned together when loading
 contexts of all events at once.
 
