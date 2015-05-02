@@ -42,7 +42,7 @@ setup(
     install_requires=[
         'cached-property>=0.1.5',
         'Django>=1.7',
-        'django-entity>=1.10.0',
+        'django-entity>=1.10.1',
         'jsonfield>=0.9.20',
         'six'
     ],
