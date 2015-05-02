@@ -2,10 +2,7 @@
 branch = True
 omit =
     entity_event/migrations/*
-    entity_event/south_migrations/*
-    entity_event/tests/*
     entity_event/version.py
-    entity_event/apps.py
 source = entity_event
 [report]
 exclude_lines =

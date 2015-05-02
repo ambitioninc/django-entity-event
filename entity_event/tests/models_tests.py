@@ -244,7 +244,7 @@ class MediumEventsInterfacesTest(TestCase):
 class MediumRenderTest(SimpleTestCase):
     @patch('entity_event.context_loader.load_contexts_and_renderers', spec_set=True)
     def test_render(self, mock_load_contexts_and_renderers):
-        medium = N(Medium, persist_dependencies=False)
+        medium = N(Medium)
         e1 = Mock(render=Mock(return_value=('e1.txt', 'e1.html')))
         e2 = Mock(render=Mock(return_value=('e2.txt', 'e2.html')))
 
@@ -362,7 +362,7 @@ class MediumGetEventFiltersTest(TestCase):
 
 class MediumFollowedByTest(TestCase):
     def setUp(self):
-        self.medium = N(Medium, persist_dependencies=False)
+        self.medium = N(Medium)
         self.superentity = G(Entity)
         self.sub1, self.sub2 = G(Entity), G(Entity)
         G(EntityRelationship, super_entity=self.superentity, sub_entity=self.sub1)
@@ -395,7 +395,7 @@ class MediumFollowedByTest(TestCase):
 
 class MediumFollowersOfTest(TestCase):
     def setUp(self):
-        self.medium = N(Medium, persist_dependencies=False)
+        self.medium = N(Medium)
         self.superentity = G(Entity)
         self.sub1, self.sub2 = G(Entity), G(Entity)
         self.random_entity = G(Entity)
@@ -435,8 +435,8 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
         G(EntityRelationship, super_entity=superentity, sub_entity=sub1)
         G(EntityRelationship, super_entity=superentity, sub_entity=sub2)
 
-        self.group_sub = N(Subscription, entity=superentity, sub_entity_kind=person_kind, persist_dependencies=False)
-        self.indiv_sub = N(Subscription, entity=superentity, sub_entity_kind=None, persist_dependencies=False)
+        self.group_sub = N(Subscription, entity=superentity, sub_entity_kind=person_kind)
+        self.indiv_sub = N(Subscription, entity=superentity, sub_entity_kind=None)
 
     def test_both_branches_return_queryset(self):
         group_qs = self.group_sub.subscribed_entities()
@@ -455,14 +455,14 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
 class ContextRendererRenderTextOrHtmlTemplateTest(SimpleTestCase):
     @patch('entity_event.models.render_to_string', spec_set=True)
     def test_w_html_template_path(self, mock_render_to_string):
-        cr = N(ContextRenderer, html_template_path='html_path', persist_dependencies=False)
+        cr = N(ContextRenderer, html_template_path='html_path')
         c = {'context': 'context'}
         cr.render_text_or_html_template(c, is_text=False)
         mock_render_to_string.assert_called_once_with('html_path', c)
 
     @patch('entity_event.models.render_to_string', spec_set=True)
     def test_w_text_template_path(self, mock_render_to_string):
-        cr = N(ContextRenderer, text_template_path='text_path', persist_dependencies=False)
+        cr = N(ContextRenderer, text_template_path='text_path')
         c = {'context': 'context'}
         cr.render_text_or_html_template(c, is_text=True)
         mock_render_to_string.assert_called_once_with('text_path', c)
@@ -470,7 +470,7 @@ class ContextRendererRenderTextOrHtmlTemplateTest(SimpleTestCase):
     @patch.object(Template, '__init__', spec_set=True, return_value=None)
     @patch.object(Template, 'render', spec_set=True)
     def test_w_html_template(self, mock_render, mock_init):
-        cr = N(ContextRenderer, html_template='html_template', persist_dependencies=False)
+        cr = N(ContextRenderer, html_template='html_template')
         c = {'context': 'context'}
         cr.render_text_or_html_template(c, is_text=False)
         self.assertEqual(mock_render.call_count, 1)
@@ -479,19 +479,19 @@ class ContextRendererRenderTextOrHtmlTemplateTest(SimpleTestCase):
     @patch.object(Template, '__init__', spec_set=True, return_value=None)
     @patch.object(Template, 'render', spec_set=True)
     def test_w_text_template(self, mock_render, mock_init):
-        cr = N(ContextRenderer, text_template='text_template', persist_dependencies=False)
+        cr = N(ContextRenderer, text_template='text_template')
         c = {'context': 'context'}
         cr.render_text_or_html_template(c, is_text=True)
         self.assertEqual(mock_render.call_count, 1)
         mock_init.assert_called_once_with('text_template')
 
     def test_w_no_templates_text(self):
-        cr = N(ContextRenderer, persist_dependencies=False)
+        cr = N(ContextRenderer)
         c = {'context': 'context'}
         self.assertEqual(cr.render_text_or_html_template(c, is_text=True), '')
 
     def test_w_no_templates_html(self):
-        cr = N(ContextRenderer, persist_dependencies=False)
+        cr = N(ContextRenderer)
         c = {'context': 'context'}
         self.assertEqual(cr.render_text_or_html_template(c, is_text=False), '')
 
@@ -534,20 +534,20 @@ class UnseenEventIdsTest(TestCase):
 
 class UnicodeTest(SimpleTestCase):
     def setUp(self):
-        self.rendering_style = N(RenderingStyle, display_name='Test Render Group', persist_dependencies=False)
-        self.context_renderer = N(ContextRenderer, name='Test Context Renderer', persist_dependencies=False)
-        self.medium = N(Medium, display_name='Test Medium', persist_dependencies=False)
-        self.source = N(Source, display_name='Test Source', persist_dependencies=False)
-        self.source_group = N(SourceGroup, display_name='Test Source Group', persist_dependencies=False)
-        self.entity = N(Entity, display_name='Test Entity', persist_dependencies=False)
+        self.rendering_style = N(RenderingStyle, display_name='Test Render Group')
+        self.context_renderer = N(ContextRenderer, name='Test Context Renderer')
+        self.medium = G(Medium, display_name='Test Medium')
+        self.source = G(Source, display_name='Test Source')
+        self.source_group = G(SourceGroup, display_name='Test Source Group')
+        self.entity = G(Entity, display_name='Test Entity')
         self.unsubscription = N(
-            Unsubscription, entity=self.entity, medium=self.medium, source=self.source, persist_dependencies=False)
+            Unsubscription, entity=self.entity, medium=self.medium, source=self.source)
         self.subscription = N(
-            Subscription, entity=self.entity, source=self.source, medium=self.medium, persist_dependencies=False)
-        self.event = N(Event, source=self.source, context={}, id=1, persist_dependencies=False)
-        self.event_actor = N(EventActor, event=self.event, entity=self.entity, persist_dependencies=False)
+            Subscription, entity=self.entity, source=self.source, medium=self.medium)
+        self.event = N(Event, source=self.source, context={}, id=1)
+        self.event_actor = N(EventActor, event=self.event, entity=self.entity)
         self.event_seen = N(
-            EventSeen, event=self.event, medium=self.medium, time_seen=datetime(2014, 1, 2), persist_dependencies=False)
+            EventSeen, event=self.event, medium=self.medium, time_seen=datetime(2014, 1, 2))
 
     def test_RenderingStyle_formats(self):
         s = text_type(self.rendering_style)
