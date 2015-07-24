@@ -164,6 +164,17 @@ default rendering style to use. If this variable is set and an appropriate conte
 be fetched for an event during rendering, the default rendering style will be used instead for
 that event (if it has been configured).
 
+Serialized Context Data
++++++++++++++++++++++++
+
+If your display mechanism needs access to the context data of the event this can be accomplished by calling:
+:py:meth:`Event.get_serialized_context
+<entity_event.models.Event.get_serialized_context>` method on the
+:py:class:`~entity_event.models.Event` model. This will return a serializer safe version of the context that is used
+to generate the event output. This is useful if you want to make a completely custom rendering on the display device
+or you need additional context information about the event that occurred.
+
+
 Customizing Only-Following Behavior
 -----------------------------------
 
