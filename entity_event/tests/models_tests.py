@@ -562,7 +562,7 @@ class ContextRendererRenderContextToTextHtmlTemplates(SimpleTestCase):
 
 
 class ContextRendererGetSerializedContextTests(SimpleTestCase):
-    @patch('entity_event.models.DefaultContextSerializer', autospec=True)
+    @patch('entity_event.models.DefaultContextSerializer')
     def test_get_serialized_context(self, mock_default_context_serializer):
         context = {'context': 'context'}
         response = ContextRenderer().get_serialized_context(context)

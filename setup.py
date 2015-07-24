@@ -49,7 +49,7 @@ setup(
     tests_require=[
         'psycopg2',
         'django-nose>=1.4',
-        'mock>=1.0.1,<1.1.2',
+        'mock>=1.0.1',
         'coverage>=3.7.1',
         'freezegun',
         'django-dynamic-fixture'
