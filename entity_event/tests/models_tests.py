@@ -82,6 +82,57 @@ class EventRenderTest(TestCase):
         with self.assertRaises(RuntimeError):
             e.render(m)
 
+    def test_get_serialized_context(self):
+        rg = G(RenderingStyle)
+        s = G(Source)
+        G(
+            ContextRenderer, source=s, rendering_style=rg, text_template_path='test_template.txt',
+            html_template_path='test_template.html', context_hints={
+                'fk_model': {
+                    'app_name': 'tests',
+                    'model_name': 'TestFKModel',
+                }
+            })
+        m = G(Medium, rendering_style=rg, additional_context={'suppress_value': True})
+
+        fkm = G(TestFKModel, value='100')
+        G(Event, source=s, context={'fk_model': fkm.id})
+        event = Event.objects.all().load_contexts_and_renderers(m)[0]
+
+        # Call the method
+        response = event.get_serialized_context(m)
+
+        # Assert we have a proper response
+        self.assertEqual(
+            response,
+            {
+                'suppress_value': True,
+                'fk_model': {
+                    'id': fkm.id,
+                    'value': fkm.value
+                }
+            }
+        )
+
+    def test_get_serialized_context_wo_fetching_context(self):
+        rg = G(RenderingStyle)
+        s = G(Source)
+        G(
+            ContextRenderer, source=s, rendering_style=rg, text_template_path='test_template.txt',
+            html_template_path='test_template.html', context_hints={
+                'fk_model': {
+                    'app_name': 'tests',
+                    'model_name': 'TestFKModel',
+                }
+            })
+        m = G(Medium, rendering_style=rg, additional_context={'suppress_value': True})
+
+        fkm = G(TestFKModel, value='100')
+        event = G(Event, source=s, context={'fk_model': fkm.id})
+
+        with self.assertRaises(RuntimeError):
+            event.get_serialized_context(m)
+
 
 class EventManagerCreateEventTest(TestCase):
     def test_create_event_no_actors(self):
@@ -508,6 +559,19 @@ class ContextRendererRenderContextToTextHtmlTemplates(SimpleTestCase):
             ))
         self.assertEqual(
             mock_render_text_or_html_template.call_args_list, [call(c, is_text=True), call(c, is_text=False)])
+
+
+class ContextRendererGetSerializedContextTests(SimpleTestCase):
+    @patch('entity_event.models.DefaultContextSerializer')
+    def test_get_serialized_context(self, mock_default_context_serializer):
+        context = {'context': 'context'}
+        response = ContextRenderer().get_serialized_context(context)
+
+        # Assert we have a proper response
+        self.assertEqual(response, mock_default_context_serializer.return_value.data)
+
+        # Assert that we created the default serializer correctly
+        mock_default_context_serializer.assert_called_once_with(context)
 
 
 class UnseenEventIdsTest(TestCase):

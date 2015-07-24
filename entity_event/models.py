@@ -12,6 +12,7 @@ from django.template import Context, Template
 from django.utils.encoding import python_2_unicode_compatible
 from entity.models import Entity, EntityKind, EntityRelationship
 import jsonfield
+from entity_event.context_serializer import DefaultContextSerializer
 
 
 @python_2_unicode_compatible
@@ -1010,6 +1011,18 @@ class Event(models.Model):
             context = self._merge_medium_additional_context_with_context(medium)
             return self._context_renderers[medium].render_context_to_text_html_templates(context)
 
+    def get_serialized_context(self, medium):
+        """
+        Returns the serialized context of the event for a specific medium
+        :param medium:
+        :return:
+        """
+        if medium not in self._context_renderers:
+            raise RuntimeError('Context and renderer for medium {0} has not or cannot been fetched'.format(medium))
+        else:
+            context = self._merge_medium_additional_context_with_context(medium)
+            return self._context_renderers[medium].get_serialized_context(context)
+
     def __str__(self):
         """Readable representation of ``Event`` objects."""
         s = '{source} event at {time}'
@@ -1188,7 +1201,7 @@ class ContextRenderer(models.Model):
     # The rendering style. Used to associated it with a medium
     rendering_style = models.ForeignKey(RenderingStyle)
 
-    # Containts hints on how to fetch the context from the database
+    # Contains hints on how to fetch the context from the database
     context_hints = jsonfield.JSONField(null=True, default=None)
 
     class Meta:
@@ -1199,6 +1212,12 @@ class ContextRenderer(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_serialized_context(self, context):
+        """
+        Serializes the context using the serializer class.
+        """
+        return DefaultContextSerializer(context).data
 
     def render_text_or_html_template(self, context, is_text=True):
         """

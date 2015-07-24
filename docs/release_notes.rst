@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+v0.4.3
+------
+
+* Added ability to get a serialized version of an events context data
+
 v0.4.0
 ------
 
