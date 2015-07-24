@@ -573,6 +573,7 @@ class ContextRendererGetSerializedContextTests(SimpleTestCase):
         # Assert that we created the default serializer correctly
         mock_default_context_serializer.assert_called_once_with(context)
 
+
 class UnseenEventIdsTest(TestCase):
     def test_filters_seen(self):
         m = G(Medium)
