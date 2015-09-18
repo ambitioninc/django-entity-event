@@ -10,7 +10,8 @@ from six import text_type
 
 from entity_event.models import (
     Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen,
-    RenderingStyle, ContextRenderer, _unseen_event_ids
+    RenderingStyle, ContextRenderer, _unseen_event_ids, SubscriptionQuerySet, SubscriptionManager,
+    EventQuerySet, EventManager
 )
 from entity_event.tests.models import TestFKModel
 
@@ -182,6 +183,16 @@ class EventManagerCreateEventTest(TestCase):
 
 
 class EventManagerQuerySetTest(TestCase):
+    def setUp(self):
+        # Call the super setup
+        super(EventManagerQuerySetTest, self).setUp()
+
+        # Create a query set reference
+        self.queryset = EventQuerySet()
+
+        # Create a manager reference
+        self.manager = EventManager()
+
     def test_mark_seen(self):
         event = G(Event, context={})
         medium = G(Medium)
@@ -197,6 +208,17 @@ class EventManagerQuerySetTest(TestCase):
         self.assertEquals(mock_load_contexts_and_renderers.call_count, 1)
         self.assertEquals(list(mock_load_contexts_and_renderers.call_args_list[0][0][0]), [e])
         self.assertEquals(mock_load_contexts_and_renderers.call_args_list[0][0][1], [medium])
+
+    @patch.object(EventManager, 'get_queryset', autospec=True)
+    def test_cache_related(self, mock_get_queryset):
+        # Setup some mock return values
+        mock_get_queryset.return_value = Mock(EventQuerySet(), autospec=True)
+
+        # Call the method
+        self.manager.cache_related()
+
+        # Assert that we called get queryset
+        mock_get_queryset.assert_called_once_with(self.manager)
 
 
 class MediumEventsInterfacesTest(TestCase):
@@ -652,3 +674,56 @@ class UnicodeTest(SimpleTestCase):
     def test_event_seenformats(self):
         s = text_type(self.event_seen)
         self.assertEqual(s, 'Seen on Test Medium at 2014-01-02::00:00:00')
+
+
+class SubscriptionQuerySetTest(SimpleTestCase):
+    """
+    Test the subscription query set class
+    """
+
+    def setUp(self):
+        # Call super
+        super(SubscriptionQuerySetTest, self).setUp()
+
+        # Create a query set to use
+        self.queryset = SubscriptionQuerySet()
+
+    @patch.object(SubscriptionQuerySet, 'select_related', autospec=True)
+    def test_cache_related(self, mock_select_related):
+        # Call the method
+        self.queryset.cache_related()
+
+        # Assert that we called select related with the correct args
+        mock_select_related.assert_called_once_with(
+            self.queryset,
+            'medium',
+            'source',
+            'entity',
+            'sub_entity_kind'
+        )
+
+
+class SubscriptionManagerTest(SimpleTestCase):
+    """
+    Test the subscription manager class
+    """
+    def setUp(self):
+        # Call super
+        super(SubscriptionManagerTest, self).setUp()
+
+        # Create a query set to use
+        self.manager = SubscriptionManager()
+
+    @patch.object(SubscriptionManager, 'get_queryset', autospec=True)
+    def test_cache_related(self, mock_get_queryset):
+        # Setup some return values
+        mock_get_queryset.return_value = Mock(SubscriptionQuerySet(), autospec=True)
+
+        # Call the method
+        response = self.manager.cache_related()
+
+        # Assert that we called the proper methods
+        self.assertEqual(
+            response,
+            mock_get_queryset.return_value.cache_related.return_value
+        )
