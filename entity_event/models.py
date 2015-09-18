@@ -159,7 +159,9 @@ class Medium(models.Model):
         :returns: A queryset of events.
         """
         events = self.get_filtered_events(**event_filters)
-        subscriptions = Subscription.objects.filter(medium=self)
+        subscriptions = Subscription.objects.cache_related().filter(
+            medium=self
+        )
 
         subscription_q_objects = [
             Q(
@@ -171,7 +173,7 @@ class Medium(models.Model):
         subscription_q_objects.append(
             Q(source__in=[sub.source for sub in subscriptions if not sub.only_following]))
 
-        events = events.filter(reduce(or_, subscription_q_objects))
+        events = events.cache_related().filter(reduce(or_, subscription_q_objects))
         return events
 
     @transaction.atomic
@@ -715,6 +717,39 @@ class Unsubscription(models.Model):
         return s.format(entity=entity, source=source, medium=medium)
 
 
+class SubscriptionQuerySet(QuerySet):
+    """A custom QuerySet for Subscriptions.
+    """
+
+    def cache_related(self):
+        """
+        Cache any related objects that we may use
+        :return:
+        """
+        return self.select_related(
+            'medium',
+            'source',
+            'entity',
+            'sub_entity_kind'
+        )
+
+
+class SubscriptionManager(models.Manager):
+    """A custom Manager for Subscriptions.
+    """
+    def get_queryset(self):
+        """Return the SubscriptionQuerySet.
+        """
+        return EventQuerySet(self.model)
+
+    def cache_related(self):
+        """
+        Return a queryset with prefetched values
+        :return:
+        """
+        return self.get_queryset().cache_related()
+
+
 @python_2_unicode_compatible
 class Subscription(models.Model):
     """Which types of events are available to which mediums is controlled
@@ -799,6 +834,8 @@ class Subscription(models.Model):
     sub_entity_kind = models.ForeignKey(EntityKind, null=True, related_name='+', default=None)
     only_following = models.BooleanField(default=True)
 
+    objects = SubscriptionManager()
+
     def __str__(self):
         """Readable representation of ``Subscription`` objects."""
         s = '{entity} to {source} by {medium}'
@@ -830,6 +867,18 @@ class Subscription(models.Model):
 class EventQuerySet(QuerySet):
     """A custom QuerySet for Events.
     """
+
+    def cache_related(self):
+        """
+        Cache any related objects that we may use
+        :return:
+        """
+        return self.select_related(
+            'source'
+        ).prefetch_related(
+            'source__group'
+        )
+
     def mark_seen(self, medium):
         """Creates EventSeen objects for the provided medium for every event
         in the queryset.
@@ -859,6 +908,13 @@ class EventManager(models.Manager):
         """Return the EventQuerySet.
         """
         return EventQuerySet(self.model)
+
+    def cache_related(self):
+        """
+        Return a queryset with prefetched values
+        :return:
+        """
+        return self.get_queryset().cache_related()
 
     def mark_seen(self, medium):
         """Creates EventSeen objects for the provided medium for every event
