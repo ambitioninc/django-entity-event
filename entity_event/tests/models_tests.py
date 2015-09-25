@@ -10,7 +10,7 @@ from six import text_type
 
 from entity_event.models import (
     Medium, Source, SourceGroup, Unsubscription, Subscription, Event, EventActor, EventSeen,
-    RenderingStyle, ContextRenderer, _unseen_event_ids, SubscriptionQuerySet, SubscriptionManager,
+    RenderingStyle, ContextRenderer, _unseen_event_ids, SubscriptionQuerySet,
     EventQuerySet, EventManager
 )
 from entity_event.tests.models import TestFKModel
@@ -700,30 +700,4 @@ class SubscriptionQuerySetTest(SimpleTestCase):
             'source',
             'entity',
             'sub_entity_kind'
-        )
-
-
-class SubscriptionManagerTest(SimpleTestCase):
-    """
-    Test the subscription manager class
-    """
-    def setUp(self):
-        # Call super
-        super(SubscriptionManagerTest, self).setUp()
-
-        # Create a query set to use
-        self.manager = SubscriptionManager()
-
-    @patch.object(SubscriptionManager, 'get_queryset', autospec=True)
-    def test_cache_related(self, mock_get_queryset):
-        # Setup some return values
-        mock_get_queryset.return_value = Mock(SubscriptionQuerySet(), autospec=True)
-
-        # Call the method
-        response = self.manager.cache_related()
-
-        # Assert that we called the proper methods
-        self.assertEqual(
-            response,
-            mock_get_queryset.return_value.cache_related.return_value
         )
