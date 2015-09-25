@@ -726,28 +726,7 @@ class SubscriptionQuerySet(QuerySet):
         Cache any related objects that we may use
         :return:
         """
-        return self.select_related(
-            'medium',
-            'source',
-            'entity',
-            'sub_entity_kind'
-        )
-
-
-class SubscriptionManager(models.Manager):
-    """A custom Manager for Subscriptions.
-    """
-    def get_queryset(self):
-        """Return the SubscriptionQuerySet.
-        """
-        return EventQuerySet(self.model)
-
-    def cache_related(self):
-        """
-        Return a queryset with prefetched values
-        :return:
-        """
-        return self.get_queryset().cache_related()
+        return self.select_related('medium', 'source', 'entity', 'sub_entity_kind')
 
 
 @python_2_unicode_compatible
@@ -834,7 +813,7 @@ class Subscription(models.Model):
     sub_entity_kind = models.ForeignKey(EntityKind, null=True, related_name='+', default=None)
     only_following = models.BooleanField(default=True)
 
-    objects = SubscriptionManager()
+    objects = SubscriptionQuerySet.as_manager()
 
     def __str__(self):
         """Readable representation of ``Subscription`` objects."""
