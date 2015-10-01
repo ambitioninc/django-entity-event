@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+v0.4.4
+------
+
+* Added some optimizations during event fetching to select and prefetch some related objects
+
 v0.4.3
 ------
 
