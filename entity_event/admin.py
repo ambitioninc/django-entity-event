@@ -44,6 +44,11 @@ class AdminEventAdmin(admin.ModelAdmin):
     form = AdminEventForm
 
 
+class EventSeenAdmin(admin.ModelAdmin):
+    list_display = ('event', 'medium', 'time_seen')
+    list_filter = ('event__source',)
+
+
 class EventActorInline(admin.TabularInline):
     model = EventActor
 
@@ -54,6 +59,8 @@ class EventSeenInline(admin.TabularInline):
 
 class EventAdmin(admin.ModelAdmin):
     list_display = ('time', 'source')
+    list_filter = ('time', 'source')
+
     inlines = [
         EventActorInline,
         EventSeenInline
@@ -74,6 +81,7 @@ class SourceGroupAdmin(admin.ModelAdmin):
 
 class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ('entity', 'source', 'medium', 'sub_entity_kind', 'only_following')
+    search_fields = ('entity', 'source')
 
 
 class UnsubscriptionAdmin(admin.ModelAdmin):
@@ -83,6 +91,7 @@ class UnsubscriptionAdmin(admin.ModelAdmin):
 admin.site.register(AdminEvent, AdminEventAdmin)
 admin.site.register(Medium, MediumAdmin)
 admin.site.register(Event, EventAdmin)
+admin.site.register(EventSeen, EventSeenAdmin)
 admin.site.register(Source, SourceAdmin)
 admin.site.register(SourceGroup, SourceGroupAdmin)
 admin.site.register(Subscription, SubscriptionAdmin)
