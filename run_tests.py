@@ -1,3 +1,6 @@
+"""
+Provides the ability to run test on a standalone Django app.
+"""
 import sys
 from optparse import OptionParser
 from settings import configure_settings
@@ -11,9 +14,6 @@ from django_nose import NoseTestSuiteRunner
 
 
 def run_tests(*test_args, **kwargs):
-    """
-    Provides the ability to run test on a standalone Django app.
-    """
     if not test_args:
         test_args = ['entity_event']
 
