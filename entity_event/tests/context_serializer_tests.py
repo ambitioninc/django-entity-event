@@ -2,6 +2,7 @@ import json
 from django.test.testcases import TransactionTestCase
 from django_dynamic_fixture import G
 from mock import patch, call
+
 from entity_event.context_serializer import DefaultContextSerializer
 
 
