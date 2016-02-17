@@ -47,6 +47,7 @@ def configure_settings():
                 'entity',
                 'entity_event',
                 'entity_event.tests',
+                'django_nose',
             ),
             ROOT_URLCONF='entity_event.urls',
             DEBUG=False,

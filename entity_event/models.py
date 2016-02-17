@@ -12,6 +12,7 @@ from django.template import Context, Template
 from django.utils.encoding import python_2_unicode_compatible
 from entity.models import Entity, EntityKind, EntityRelationship
 import jsonfield
+
 from entity_event.context_serializer import DefaultContextSerializer
 
 
