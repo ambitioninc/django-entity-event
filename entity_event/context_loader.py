@@ -6,7 +6,13 @@ import six
 
 from django.conf import settings
 from django.db.models import Q
-from django.db.models.loading import get_model
+try:
+    # Django 1.9
+    from django.apps import apps
+    get_model = apps.get_model
+except ImportError:  # pragma: no cover
+    # Django < 1.9
+    from django.db.models import get_model
 from manager_utils import id_dict
 
 from entity_event.models import ContextRenderer
