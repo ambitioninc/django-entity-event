@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+v0.5.0
+------
+
+* Added django 1.9 support
+
 v0.4.4
 ------
 
