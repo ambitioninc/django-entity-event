@@ -165,7 +165,7 @@ class TestGetQuerysetsForContextHints(TestCase):
             '"tests_testmodel"."fk2_id", '
             '"tests_testfkmodel"."id", "tests_testfkmodel"."value", '
             '"tests_testfkmodel2"."id", "tests_testfkmodel2"."value" FROM "tests_testmodel" INNER JOIN '
-            '"tests_testfkmodel" ON ( "tests_testmodel"."fk_id" = "tests_testfkmodel"."id" ) '
+            '"tests_testfkmodel" ON ("tests_testmodel"."fk_id" = "tests_testfkmodel"."id") '
             'INNER JOIN "tests_testfkmodel2" ON ("tests_testmodel"."fk2_id" = "tests_testfkmodel2"."id")'
         )
 
@@ -204,7 +204,7 @@ class TestGetQuerysetsForContextHints(TestCase):
             '"tests_testmodel"."fk2_id", '
             '"tests_testfkmodel"."id", "tests_testfkmodel"."value", '
             '"tests_testfkmodel2"."id", "tests_testfkmodel2"."value" FROM "tests_testmodel" INNER JOIN '
-            '"tests_testfkmodel" ON ( "tests_testmodel"."fk_id" = "tests_testfkmodel"."id" ) '
+            '"tests_testfkmodel" ON ("tests_testmodel"."fk_id" = "tests_testfkmodel"."id") '
             'INNER JOIN "tests_testfkmodel2" ON ("tests_testmodel"."fk2_id" = "tests_testfkmodel2"."id")'
         )
 
