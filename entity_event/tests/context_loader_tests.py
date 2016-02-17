@@ -127,14 +127,18 @@ class TestGetQuerysetsForContextHints(TestCase):
             },
         })
         # Verify the raw sql to ensure select relateds will happen
-        raw_sql = (
+        expected_sql = (
             'SELECT "tests_testmodel"."id", "tests_testmodel"."value", "tests_testmodel"."fk_id", '
             '"tests_testmodel"."fk2_id", '
             '"tests_testfkmodel"."id", "tests_testfkmodel"."value" FROM "tests_testmodel" INNER JOIN '
-            '"tests_testfkmodel" ON ( "tests_testmodel"."fk_id" = "tests_testfkmodel"."id" )'
+            '"tests_testfkmodel" ON ("tests_testmodel"."fk_id" = "tests_testfkmodel"."id")'
         )
+        actual_sql = str(qsets[test_models.TestModel].query)
 
-        self.assertEquals(str(qsets[test_models.TestModel].query), raw_sql)
+        # Django < 1.7 and 1.8 have spaces before/after parentheses
+        actual_sql = actual_sql.replace('( ', '(').replace(' )', ')')
+
+        self.assertEquals(actual_sql, expected_sql)
 
     def test_multiple_context_hints_w_multiple_select_related(self):
         source = N(models.Source, id=1)
@@ -156,16 +160,21 @@ class TestGetQuerysetsForContextHints(TestCase):
             }
         })
         # Verify the raw sql to ensure select relateds will happen
-        raw_sql = (
+        expected_sql = (
             'SELECT "tests_testmodel"."id", "tests_testmodel"."value", "tests_testmodel"."fk_id", '
             '"tests_testmodel"."fk2_id", '
             '"tests_testfkmodel"."id", "tests_testfkmodel"."value", '
             '"tests_testfkmodel2"."id", "tests_testfkmodel2"."value" FROM "tests_testmodel" INNER JOIN '
             '"tests_testfkmodel" ON ( "tests_testmodel"."fk_id" = "tests_testfkmodel"."id" ) '
-            'INNER JOIN "tests_testfkmodel2" ON ( "tests_testmodel"."fk2_id" = "tests_testfkmodel2"."id" )'
+            'INNER JOIN "tests_testfkmodel2" ON ("tests_testmodel"."fk2_id" = "tests_testfkmodel2"."id")'
         )
 
-        self.assertEquals(str(qsets[test_models.TestModel].query), raw_sql)
+        actual_sql = str(qsets[test_models.TestModel].query)
+
+        # Django < 1.7 and 1.8 have spaces before/after parentheses
+        actual_sql = actual_sql.replace('( ', '(').replace(' )', ')')
+
+        self.assertEquals(actual_sql, expected_sql)
 
     def test_multiple_context_hints_w_multiple_select_related_multiple_prefetch_related(self):
         source = N(models.Source, id=1)
@@ -190,16 +199,21 @@ class TestGetQuerysetsForContextHints(TestCase):
 
         # Verify the raw sql to ensure select relateds will happen. Note that prefetch relateds are not
         # included in raw sql
-        raw_sql = (
+        expected_sql = (
             'SELECT "tests_testmodel"."id", "tests_testmodel"."value", "tests_testmodel"."fk_id", '
             '"tests_testmodel"."fk2_id", '
             '"tests_testfkmodel"."id", "tests_testfkmodel"."value", '
             '"tests_testfkmodel2"."id", "tests_testfkmodel2"."value" FROM "tests_testmodel" INNER JOIN '
             '"tests_testfkmodel" ON ( "tests_testmodel"."fk_id" = "tests_testfkmodel"."id" ) '
-            'INNER JOIN "tests_testfkmodel2" ON ( "tests_testmodel"."fk2_id" = "tests_testfkmodel2"."id" )'
+            'INNER JOIN "tests_testfkmodel2" ON ("tests_testmodel"."fk2_id" = "tests_testfkmodel2"."id")'
         )
 
-        self.assertEquals(str(qsets[test_models.TestModel].query), raw_sql)
+        actual_sql = str(qsets[test_models.TestModel].query)
+
+        # Django < 1.7 and 1.8 have spaces before/after parentheses
+        actual_sql = actual_sql.replace('( ', '(').replace(' )', ')')
+
+        self.assertEquals(actual_sql, expected_sql)
 
 
 class TestGetQuerysetsForContextHintsDbTests(TestCase):
