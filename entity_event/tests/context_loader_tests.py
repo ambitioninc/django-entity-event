@@ -1,4 +1,4 @@
-from django.test import SimpleTestCase, TestCase
+from django.test import TestCase
 from django.test.utils import override_settings
 from django_dynamic_fixture import N, G
 from mock import patch
@@ -18,7 +18,7 @@ class TestGetDefaultRenderingStyle(TestCase):
         self.assertEquals(context_loader.get_default_rendering_style(), rs)
 
 
-class TestGetContextHintsFromSource(SimpleTestCase):
+class TestGetContextHintsFromSource(TestCase):
     def test_no_context_renderers(self):
         res = context_loader.get_context_hints_per_source([])
         self.assertEquals(res, {})
@@ -96,7 +96,7 @@ class TestGetContextHintsFromSource(SimpleTestCase):
         })
 
 
-class TestGetQuerysetsForContextHints(SimpleTestCase):
+class TestGetQuerysetsForContextHints(TestCase):
     def test_no_context_hints(self):
         qsets = context_loader.get_querysets_for_context_hints({})
         self.assertEquals(qsets, {})
@@ -238,7 +238,7 @@ class TestGetQuerysetsForContextHintsDbTests(TestCase):
             self.assertEquals(set(v.fk_m2m.all()), set(m2ms))
 
 
-class DictFindTest(SimpleTestCase):
+class DictFindTest(TestCase):
     def test_dict_find_none(self):
         self.assertEquals(list(context_loader.dict_find({}, 'key')), [])
 
@@ -282,7 +282,7 @@ class DictFindTest(SimpleTestCase):
         self.assertEquals(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value']), (d, ['value'])])
 
 
-class GetModelIdsToFetchTest(SimpleTestCase):
+class GetModelIdsToFetchTest(TestCase):
     def test_no_events(self):
         self.assertEquals(context_loader.get_model_ids_to_fetch([], {}), {})
 
@@ -397,7 +397,7 @@ class FetchModelDataTest(TestCase):
         }))
 
 
-class LoadFetchedObjectsIntoContextsTest(SimpleTestCase):
+class LoadFetchedObjectsIntoContextsTest(TestCase):
     def test_none(self):
         context_loader.load_fetched_objects_into_contexts([], {}, {})
 
@@ -438,7 +438,7 @@ class LoadFetchedObjectsIntoContextsTest(SimpleTestCase):
         self.assertEquals(e.context, {'key': [m1, m2]})
 
 
-class TestLoadRenderersIntoEvents(SimpleTestCase):
+class TestLoadRenderersIntoEvents(TestCase):
     def test_no_mediums_or_renderers(self):
         events = [N(models.Event, context={})]
         context_loader.load_renderers_into_events(events, [], [], None)

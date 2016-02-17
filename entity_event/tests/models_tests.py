@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from django.template import Template
-from django.test import TestCase, SimpleTestCase
+from django.test import TestCase
 from django_dynamic_fixture import N, G
 from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
@@ -314,7 +314,7 @@ class MediumEventsInterfacesTest(TestCase):
         self.assertEqual(len(events_targets[0][1]), 1)
 
 
-class MediumRenderTest(SimpleTestCase):
+class MediumRenderTest(TestCase):
     @patch('entity_event.context_loader.load_contexts_and_renderers', spec_set=True)
     def test_render(self, mock_load_contexts_and_renderers):
         medium = N(Medium)
@@ -525,7 +525,7 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
         self.assertEqual(indiv_qs.count(), 1)
 
 
-class ContextRendererRenderTextOrHtmlTemplateTest(SimpleTestCase):
+class ContextRendererRenderTextOrHtmlTemplateTest(TestCase):
     @patch('entity_event.models.render_to_string', spec_set=True)
     def test_w_html_template_path(self, mock_render_to_string):
         cr = N(ContextRenderer, html_template_path='html_path')
@@ -569,7 +569,7 @@ class ContextRendererRenderTextOrHtmlTemplateTest(SimpleTestCase):
         self.assertEqual(cr.render_text_or_html_template(c, is_text=False), '')
 
 
-class ContextRendererRenderContextToTextHtmlTemplates(SimpleTestCase):
+class ContextRendererRenderContextToTextHtmlTemplates(TestCase):
     @patch.object(ContextRenderer, 'render_text_or_html_template', spec_set=True)
     def test_render_context_to_text_html_templates(self, mock_render_text_or_html_template):
         c = {'context': 'context'}
@@ -583,7 +583,7 @@ class ContextRendererRenderContextToTextHtmlTemplates(SimpleTestCase):
             mock_render_text_or_html_template.call_args_list, [call(c, is_text=True), call(c, is_text=False)])
 
 
-class ContextRendererGetSerializedContextTests(SimpleTestCase):
+class ContextRendererGetSerializedContextTests(TestCase):
     @patch('entity_event.models.DefaultContextSerializer')
     def test_get_serialized_context(self, mock_default_context_serializer):
         context = {'context': 'context'}
@@ -618,7 +618,7 @@ class UnseenEventIdsTest(TestCase):
         self.assertEqual(set(unseen_ids), set([e1.id, e3.id, e4.id]))
 
 
-class UnicodeTest(SimpleTestCase):
+class UnicodeTest(TestCase):
     def setUp(self):
         self.rendering_style = N(RenderingStyle, display_name='Test Render Group')
         self.context_renderer = N(ContextRenderer, name='Test Context Renderer')
@@ -676,7 +676,7 @@ class UnicodeTest(SimpleTestCase):
         self.assertEqual(s, 'Seen on Test Medium at 2014-01-02::00:00:00')
 
 
-class SubscriptionQuerySetTest(SimpleTestCase):
+class SubscriptionQuerySetTest(TestCase):
     """
     Test the subscription query set class
     """
