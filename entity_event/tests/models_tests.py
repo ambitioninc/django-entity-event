@@ -526,14 +526,14 @@ class SubscriptionSubscribedEntitiesTest(TestCase):
 
 
 class ContextRendererRenderTextOrHtmlTemplateTest(TestCase):
-    @patch('entity_event.models.render_to_string', spec_set=True)
+    @patch('entity_event.models.render_to_string')
     def test_w_html_template_path(self, mock_render_to_string):
         cr = N(ContextRenderer, html_template_path='html_path')
         c = {'context': 'context'}
         cr.render_text_or_html_template(c, is_text=False)
         mock_render_to_string.assert_called_once_with('html_path', c)
 
-    @patch('entity_event.models.render_to_string', spec_set=True)
+    @patch('entity_event.models.render_to_string')
     def test_w_text_template_path(self, mock_render_to_string):
         cr = N(ContextRenderer, text_template_path='text_path')
         c = {'context': 'context'}
