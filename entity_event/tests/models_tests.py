@@ -540,8 +540,8 @@ class ContextRendererRenderTextOrHtmlTemplateTest(TestCase):
         cr.render_text_or_html_template(c, is_text=True)
         mock_render_to_string.assert_called_once_with('text_path', c)
 
-    @patch.object(Template, '__init__', spec_set=True, return_value=None)
-    @patch.object(Template, 'render', spec_set=True)
+    @patch.object(Template, '__init__', return_value=None)
+    @patch.object(Template, 'render')
     def test_w_html_template(self, mock_render, mock_init):
         cr = N(ContextRenderer, html_template='html_template')
         c = {'context': 'context'}
@@ -549,8 +549,8 @@ class ContextRendererRenderTextOrHtmlTemplateTest(TestCase):
         self.assertEqual(mock_render.call_count, 1)
         mock_init.assert_called_once_with('html_template')
 
-    @patch.object(Template, '__init__', spec_set=True, return_value=None)
-    @patch.object(Template, 'render', spec_set=True)
+    @patch.object(Template, '__init__', return_value=None)
+    @patch.object(Template, 'render')
     def test_w_text_template(self, mock_render, mock_init):
         cr = N(ContextRenderer, text_template='text_template')
         c = {'context': 'context'}
