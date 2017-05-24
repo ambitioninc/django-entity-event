@@ -74,6 +74,7 @@ class Medium(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
+    time_created = models.DateTimeField(auto_now_add=True)
 
     # The rendering style determines the primary way the medium will try to render events.
     # If a context loader has been defined for this rendering style along with the appropriate
