@@ -332,7 +332,7 @@ class MediumTest(TestCase):
         G(Event, uuid='4', source=source2, context={})
 
         medium1 = G(Medium)
-        G(Medium)
+        medium2 = G(Medium)
 
         # Make events after the mediums
         G(Event, uuid='5', source=source1, context={})
