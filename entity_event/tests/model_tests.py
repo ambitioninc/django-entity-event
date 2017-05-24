@@ -314,6 +314,43 @@ class MediumEventsInterfacesTest(TestCase):
         self.assertEqual(len(events_targets[0][1]), 1)
 
 
+class MediumTest(TestCase):
+
+    def test_events_targets_start_time(self):
+        """
+        Makes sure that only events created after the medium are returned
+        """
+        entity = G(Entity)
+
+        source1 = G(Source)
+        source2 = G(Source)
+
+        # Make some events before the mediums
+        G(Event, uuid='1', source=source1, context={})
+        G(Event, uuid='2', source=source1, context={})
+        G(Event, uuid='3', source=source2, context={})
+        G(Event, uuid='4', source=source2, context={})
+
+        medium1 = G(Medium)
+        medium2 = G(Medium)
+
+        # Make events after the mediums
+        G(Event, uuid='5', source=source1, context={})
+        G(Event, uuid='6', source=source2, context={})
+
+        # Make subscriptions to different sources and mediums
+        G(Subscription, medium=medium1, source=source1, entity=entity, only_following=False)
+        G(Subscription, medium=medium2, source=source1, entity=entity, only_following=False)
+
+        # Get all events for medium 1
+        events = []
+        for event, targets in medium1.events_targets(start_time=medium1.time_created):
+            events.append(event)
+
+        # There should only be 1 event for medium 1 after the mediums were made
+        self.assertEqual(len(events), 1)
+
+
 class MediumRenderTest(TestCase):
     @patch('entity_event.context_loader.load_contexts_and_renderers', spec_set=True)
     def test_render(self, mock_load_contexts_and_renderers):
@@ -620,7 +657,7 @@ class UnseenEventIdsTest(TestCase):
 
 class UnicodeTest(TestCase):
     def setUp(self):
-        self.rendering_style = N(RenderingStyle, display_name='Test Render Group')
+        self.rendering_style = N(RenderingStyle, display_name='Test Render Group', name='test')
         self.context_renderer = N(ContextRenderer, name='Test Context Renderer')
         self.medium = G(Medium, display_name='Test Medium')
         self.source = G(Source, display_name='Test Source')
@@ -637,7 +674,7 @@ class UnicodeTest(TestCase):
 
     def test_RenderingStyle_formats(self):
         s = text_type(self.rendering_style)
-        self.assertEquals(s, 'Test Render Group')
+        self.assertEquals(s, 'Test Render Group test')
 
     def test_contextrenderer_formats(self):
         s = text_type(self.context_renderer)

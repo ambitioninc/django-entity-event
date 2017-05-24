@@ -18,7 +18,8 @@ from entity_event.context_serializer import DefaultContextSerializer
 
 @python_2_unicode_compatible
 class Medium(models.Model):
-    """A ``Medium`` is an object in the database that defines the method
+    """
+    A ``Medium`` is an object in the database that defines the method
     by which users will view events. The actual objects in the
     database are fairly simple, only requiring a ``name``,
     ``display_name`` and ``description``. Mediums can be created with
@@ -73,6 +74,7 @@ class Medium(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
+    time_created = models.DateTimeField(auto_now_add=True)
 
     # The rendering style determines the primary way the medium will try to render events.
     # If a context loader has been defined for this rendering style along with the appropriate
@@ -84,12 +86,15 @@ class Medium(models.Model):
     additional_context = jsonfield.JSONField(null=True, default=None)
 
     def __str__(self):
-        """Readable representation of ``Medium`` objects."""
+        """
+        Readable representation of ``Medium`` objects.
+        """
         return self.display_name
 
     @transaction.atomic
     def events(self, **event_filters):
-        """Return subscribed events, with basic filters.
+        """
+        Return subscribed events, with basic filters.
 
         This method of getting events is useful when you want to
         display events for your medium, independent of what entities
@@ -179,7 +184,8 @@ class Medium(models.Model):
 
     @transaction.atomic
     def entity_events(self, entity, **event_filters):
-        """Return subscribed events for a given entity.
+        """
+        Return subscribed events for a given entity.
 
         This method of getting events is useful when you want to see
         only the events relevant to a single entity. The events
@@ -279,15 +285,13 @@ class Medium(models.Model):
 
     @transaction.atomic
     def events_targets(self, entity_kind=None, **event_filters):
-        """Return all events for this medium, with who each event is for.
+        """
+        Return all events for this medium, with who each event is for.
 
-        This method is useful for individually notifying every
-        entity concerned with a collection of events, while
-        still respecting subscriptions and usubscriptions. For
-        example, ``events_targets`` can be used to send email
-        notifications, by retrieving all unseen events (and marking
-        them as now having been seen), and then processing the
-        emails. In code, this could look like:
+        This method is useful for individually notifying every entity concerned with a collection of events, while
+        still respecting subscriptions and usubscriptions. For example, ``events_targets`` can be used to send email
+        notifications, by retrieving all unseen events (and marking them as now having been seen), and then processing
+        the emails. In code, this could look like:
 
         .. code-block:: python
 
@@ -301,56 +305,42 @@ class Medium(models.Model):
                     recipient_list = [t.entity_meta["email"] for t in targets]
                 )
 
-        This ``events_targets`` method attempts to make bulk
-        processing of push-style notifications straightforward. This
-        sort of processing should normally occur in a separate thread
-        from any request/response cycle.
+        This ``events_targets`` method attempts to make bulk processing of push-style notifications straightforward.
+        This sort of processing should normally occur in a separate thread from any request/response cycle.
 
-        Filtering based on the properties of the events themselves is
-        supported, through the rest of the following arguments, which
-        are optional.
+        Filtering based on the properties of the events themselves is supported, through the rest of the following
+        arguments, which are optional.
 
         :type entity_kind: EntityKind
-        :param entity_kind: Only include targets of the given kind in
-            each targets list.
+        :param entity_kind: Only include targets of the given kind in each targets list.
 
         :type start_time: datetime.datetime (optional)
-        :param start_time: Only return events that occurred after the
-            given time. If no time is given for this argument, no
-            filtering is done.
+        :param start_time: Only return events that occurred after the given time. If no time is given for this argument,
+            no filtering is done.
 
         :type end_time: datetime.datetime (optional)
-        :param end_time: Only return events that occurred before the
-            given time. If no time is given for this argument, no
-            filtering is done
+        :param end_time: Only return events that occurred before the given time. If no time is given for this argument,
+            no filtering is done
 
         :type seen: Boolean (optional)
-        :param seen: This flag controls whether events that have
-            marked as seen are included. By default, both events that
-            have and have not been marked as seen are included. If
-            ``True`` is given for this parameter, only events that
-            have been marked as seen will be included. If ``False`` is
-            given, only events that have not been marked as seen will
-            be included.
+        :param seen: This flag controls whether events that have marked as seen are included. By default, both events
+            that have and have not been marked as seen are included. If ``True`` is given for this parameter, only
+            events that have been marked as seen will be included. If ``False`` is given, only events that have not
+            been marked as seen will be included.
 
         :type include_expired: Boolean (optional)
-        :param include_expired: By default, events that have a
-            expiration time, which has passed, are not included in the
-            results. Passing in ``True`` to this argument causes
-            expired events to be returned as well.
+        :param include_expired: By default, events that have a expiration time, which has passed, are not included in
+            the results. Passing in ``True`` to this argument causes expired events to be returned as well.
 
         :type actor: Entity (optional)
-        :param actor: Only include events with the given entity as an
-            actor.
+        :param actor: Only include events with the given entity as an actor.
 
         :type mark_seen: Boolean (optional)
-        :param mark_seen: Create a side effect in the database that
-            marks all the returned events as having been seen by this
-            medium.
+        :param mark_seen: Create a side effect in the database that marks all the returned events as having been seen
+            by this medium.
 
         :rtype: List of tuples
-        :returns: A list of tuples in the form ``(event, targets)``
-            where ``targets`` is a list of entities.
+        :returns: A list of tuples in the form ``(event, targets)`` where ``targets`` is a list of entities.
         """
         events = self.get_filtered_events(**event_filters)
         subscriptions = Subscription.objects.filter(medium=self)
@@ -363,6 +353,7 @@ class Medium(models.Model):
                     continue
 
                 subscribed = sub.subscribed_entities()
+
                 if sub.only_following:
                     potential_targets = self.followers_of(
                         event.eventactor_set.values_list('entity__id', flat=True)
@@ -384,7 +375,8 @@ class Medium(models.Model):
         return event_pairs
 
     def subset_subscriptions(self, subscriptions, entity=None):
-        """Return only subscriptions the given entity is a part of.
+        """
+        Return only subscriptions the given entity is a part of.
 
         An entity is "part of a subscription" if either:
 
@@ -418,7 +410,8 @@ class Medium(models.Model):
 
     @cached_property
     def unsubscriptions(self):
-        """Returns the unsubscribed entity IDs for each source as a dict,
+        """
+        Returns the unsubscribed entity IDs for each source as a dict,
         keyed on source_id.
 
         :rtype: Dictionary
@@ -432,14 +425,16 @@ class Medium(models.Model):
         return unsubscriptions
 
     def filter_source_targets_by_unsubscription(self, source_id, targets):
-        """Given a source id and targets, filter the targets by
+        """
+        Given a source id and targets, filter the targets by
         unsubscriptions. Return the filtered list of targets.
         """
         unsubscriptions = self.unsubscriptions
         return [t for t in targets if t.id not in unsubscriptions[source_id]]
 
     def get_filtered_events_queries(self, start_time, end_time, seen, include_expired, actor):
-        """Return Q objects to filter events table to relevant events.
+        """
+        Return Q objects to filter events table to relevant events.
 
         The filters that are applied are those passed in from the
         method that is querying the events table: One of ``events``,
@@ -476,7 +471,8 @@ class Medium(models.Model):
 
     def get_filtered_events(
             self, start_time=None, end_time=None, seen=None, mark_seen=False, include_expired=False, actor=None):
-        """Retrieves events, filters by event level filters, and marks them as
+        """
+        Retrieves events, filters by event level filters, and marks them as
         seen if necessary.
 
         :rtype: EventQuerySet
@@ -495,7 +491,8 @@ class Medium(models.Model):
         return events
 
     def followed_by(self, entities):
-        """Define what entities are followed by the entities passed to this
+        """
+        Define what entities are followed by the entities passed to this
         method.
 
         This method can be overridden by a class that concretely
@@ -535,7 +532,8 @@ class Medium(models.Model):
         return followed_by
 
     def followers_of(self, entities):
-        """Define what entities are followers of the entities passed to this
+        """
+        Define what entities are followers of the entities passed to this
         method.
 
         This method can be overridden by a class that concretely
@@ -595,7 +593,8 @@ class Medium(models.Model):
 
 @python_2_unicode_compatible
 class Source(models.Model):
-    """A ``Source`` is an object in the database that represents where
+    """
+    A ``Source`` is an object in the database that represents where
     events come from. These objects only require a few fields,
     ``name``, ``display_name`` ``description``, and ``group``.
     Source objects categorize events
@@ -640,13 +639,16 @@ class Source(models.Model):
     group = models.ForeignKey('SourceGroup')
 
     def __str__(self):
-        """Readable representation of ``Source`` objects."""
+        """
+        Readable representation of ``Source`` objects.
+        """
         return self.display_name
 
 
 @python_2_unicode_compatible
 class SourceGroup(models.Model):
-    """A ``SourceGroup`` object is a high level categorization of
+    """
+    A ``SourceGroup`` object is a high level categorization of
     events. Since ``Source`` objects are meant to be very fine
     grained, they are collected into ``SourceGroup`` objects. There is
     no additional behavior associated with the source groups other
@@ -670,13 +672,16 @@ class SourceGroup(models.Model):
     description = models.TextField()
 
     def __str__(self):
-        """Readable representation of ``SourceGroup`` objects."""
+        """
+        Readable representation of ``SourceGroup`` objects.
+        """
         return self.display_name
 
 
 @python_2_unicode_compatible
 class Unsubscription(models.Model):
-    """Because django-entity-event allows for whole groups to be
+    """
+    Because django-entity-event allows for whole groups to be
     subscribed to events at once, unsubscribing an entity is not as
     simple as removing their subscription object. Instead, the
     Unsubscription table provides a simple way to ensure that an
@@ -710,7 +715,9 @@ class Unsubscription(models.Model):
     source = models.ForeignKey('Source')
 
     def __str__(self):
-        """Readable representation of ``Unsubscription`` objects."""
+        """
+        Readable representation of ``Unsubscription`` objects.
+        """
         s = '{entity} from {source} by {medium}'
         entity = self.entity.__str__()
         source = self.source.__str__()
@@ -719,7 +726,8 @@ class Unsubscription(models.Model):
 
 
 class SubscriptionQuerySet(QuerySet):
-    """A custom QuerySet for Subscriptions.
+    """
+    A custom QuerySet for Subscriptions.
     """
 
     def cache_related(self):
@@ -732,43 +740,34 @@ class SubscriptionQuerySet(QuerySet):
 
 @python_2_unicode_compatible
 class Subscription(models.Model):
-    """Which types of events are available to which mediums is controlled
-    through ``Subscription`` objects. By creating a ``Subscription``
-    object in the database, you are storing that events from a given
-    ``Source`` object should be available to a given ``Medium``
-    object.
+    """
+    Which types of events are available to which mediums is controlled through ``Subscription`` objects. By creating a
+    ``Subscription`` object in the database, you are storing that events from a given ``Source`` object should be
+    available to a given ``Medium`` object.
 
-    Each ``Subscription`` object can be one of two levels, either an
-    individual subscription or a group subscription. Additionally,
-    each ``Subscription`` object can be one of two types of
-    subscription, either a global subscription, or an "only following"
-    subscription. ``Subscription`` objects are created using
-    ``Subscription.objects.create`` which takes the following
-    arguments:
+    Each ``Subscription`` object can be one of two levels, either an individual subscription or a group subscription.
+    Additionally, each ``Subscription`` object can be one of two types of subscription, either a global subscription,
+    or an "only following" subscription. ``Subscription`` objects are created using ``Subscription.objects.create``
+    which takes the following arguments:
 
     :type medium: Medium
     :param medium: The ``Medium`` object to make events available to.
 
     :type source: Source
-    :param source: The ``Source`` object that represents the category
-        of events to make available.
+    :param source: The ``Source`` object that represents the category of events to make available.
 
     :type entity: Entity
-    :param entity: The entity to subscribe in the case of an
-        individual subscription, or in the case of a group
+    :param entity: The entity to subscribe in the case of an individual subscription, or in the case of a group
         subscription, the super-entity of the group.
 
     :type sub_entity_kind: (optional) EntityKind
-    :param sub_entity_kind: When creating a group subscription, this
-        is a foreign key to the ``EntityKind`` of the sub-entities to
-        subscribe. In the case of an individual subscription, this should
-        be ``None``.
+    :param sub_entity_kind: When creating a group subscription, this is a foreign key to the ``EntityKind`` of the
+        sub-entities to subscribe. In the case of an individual subscription, this should be ``None``.
 
     :type only_following: Boolean
-    :param only_following: If ``True``, events will be available to
-        entities through the medium only if the entities are following
-        the actors of the event. If ``False``, the events will all
-        be available to all the entities through the medium.
+    :param only_following: If ``True``, events will be available to entities through the medium only if the entities
+        are following the actors of the event. If ``False``, the events will all be available to all the entities
+        through the medium.
 
     When a ``Medium`` object is used to query for events, only the
     events that have a subscription for their source to that medium
@@ -817,7 +816,9 @@ class Subscription(models.Model):
     objects = SubscriptionQuerySet.as_manager()
 
     def __str__(self):
-        """Readable representation of ``Subscription`` objects."""
+        """
+        Readable representation of ``Subscription`` objects.
+        """
         s = '{entity} to {source} by {medium}'
         entity = self.entity.__str__()
         source = self.source.__str__()
@@ -825,27 +826,27 @@ class Subscription(models.Model):
         return s.format(entity=entity, source=source, medium=medium)
 
     def subscribed_entities(self):
-        """Return a queryset of all subscribed entities.
+        """
+        Return a queryset of all subscribed entities.
 
-        This will be a single entity in the case of an individual
-        subscription, otherwise it will be all the entities in the
-        group subscription.
+        This will be a single entity in the case of an individual subscription, otherwise it will be all the entities
+        in the group subscription.
 
         :rtype: EntityQuerySet
-        :returns: A QuerySet of all the entities that are a part of
-            this subscription.
+        :returns: A QuerySet of all the entities that are a part of this subscription.
         """
         if self.sub_entity_kind is not None:
             sub_entities = self.entity.sub_relationships.filter(
                 sub_entity__entity_kind=self.sub_entity_kind).values_list('sub_entity')
             entities = Entity.objects.filter(id__in=sub_entities)
         else:
-            entities = Entity.objects.filter(id=self.entity.id)
+            entities = Entity.all_objects.filter(id=self.entity.id)
         return entities
 
 
 class EventQuerySet(QuerySet):
-    """A custom QuerySet for Events.
+    """
+    A custom QuerySet for Events.
     """
 
     def cache_related(self):
@@ -860,7 +861,8 @@ class EventQuerySet(QuerySet):
         )
 
     def mark_seen(self, medium):
-        """Creates EventSeen objects for the provided medium for every event
+        """
+        Creates EventSeen objects for the provided medium for every event
         in the queryset.
 
         Creating these EventSeen objects ensures they will not be
@@ -882,10 +884,12 @@ class EventQuerySet(QuerySet):
 
 
 class EventManager(models.Manager):
-    """A custom Manager for Events.
+    """
+    A custom Manager for Events.
     """
     def get_queryset(self):
-        """Return the EventQuerySet.
+        """
+        Return the EventQuerySet.
         """
         return EventQuerySet(self.model)
 
@@ -897,7 +901,8 @@ class EventManager(models.Manager):
         return self.get_queryset().cache_related()
 
     def mark_seen(self, medium):
-        """Creates EventSeen objects for the provided medium for every event
+        """
+        Creates EventSeen objects for the provided medium for every event
         in the queryset.
 
         Creating these EventSeen objects ensures they will not be
@@ -916,7 +921,8 @@ class EventManager(models.Manager):
 
     @transaction.atomic
     def create_event(self, actors=None, ignore_duplicates=False, **kwargs):
-        """Create events with actors.
+        """
+        Create events with actors.
 
         This method can be used in place of ``Event.objects.create``
         to create events, and the appropriate actors. It takes all the
@@ -984,7 +990,8 @@ class EventManager(models.Manager):
 
 @python_2_unicode_compatible
 class Event(models.Model):
-    """``Event`` objects store information about events. By storing
+    """
+    ``Event`` objects store information about events. By storing
     events, from a given source, with some context, they are made
     available to any ``Medium`` object with an appropriate
     subscription. Events can be created with
@@ -1060,7 +1067,9 @@ class Event(models.Model):
             return self._context_renderers[medium].get_serialized_context(context)
 
     def __str__(self):
-        """Readable representation of ``Event`` objects."""
+        """
+        Readable representation of ``Event`` objects.
+        """
         s = '{source} event at {time}'
         source = self.source.__str__()
         time = self.time.strftime('%Y-%m-%d::%H:%M:%S')
@@ -1068,7 +1077,8 @@ class Event(models.Model):
 
 
 class AdminEvent(Event):
-    """A proxy model used to provide a separate interface for event
+    """
+    A proxy model used to provide a separate interface for event
     creation through the django-admin interface.
     """
     class Meta:
@@ -1077,7 +1087,8 @@ class AdminEvent(Event):
 
 @python_2_unicode_compatible
 class EventActor(models.Model):
-    """``EventActor`` objects encode what entities were involved in an
+    """
+    ``EventActor`` objects encode what entities were involved in an
     event. They provide the information necessary to create "only
     following" subscriptions which route events only to the entities
     that are involved in the event.
@@ -1090,7 +1101,9 @@ class EventActor(models.Model):
     entity = models.ForeignKey(Entity)
 
     def __str__(self):
-        """Readable representation of ``EventActor`` objects."""
+        """
+        Readable representation of ``EventActor`` objects.
+        """
         s = 'Event {eventid} - {entity}'
         eventid = self.event.id
         entity = self.entity.__str__()
@@ -1099,7 +1112,8 @@ class EventActor(models.Model):
 
 @python_2_unicode_compatible
 class EventSeen(models.Model):
-    """``EventSeen`` objects store information about where and when an
+    """
+    ``EventSeen`` objects store information about where and when an
     event was seen. They store the medium that the event was seen on,
     and what time it was seen. This information is used by the event
     querying methods on ``Medium`` objects to filter events by whether
@@ -1117,7 +1131,9 @@ class EventSeen(models.Model):
         unique_together = ('event', 'medium')
 
     def __str__(self):
-        """Readable representation of ``EventSeen`` objects."""
+        """
+        Readable representation of ``EventSeen`` objects.
+        """
         s = 'Seen on {medium} at {time}'
         medium = self.medium.__str__()
         time = self.time_seen.strftime('%Y-%m-%d::%H:%M:%S')
@@ -1125,7 +1141,8 @@ class EventSeen(models.Model):
 
 
 def _unseen_event_ids(medium):
-    """Return all events that have not been seen on this medium.
+    """
+    Return all events that have not been seen on this medium.
     """
     query = '''
     SELECT event.id
@@ -1152,12 +1169,13 @@ class RenderingStyle(models.Model):
     display_name = models.CharField(max_length=64, default='')
 
     def __str__(self):
-        return self.display_name
+        return '{0} {1}'.format(self.display_name, self.name)
 
 
 @python_2_unicode_compatible
 class ContextRenderer(models.Model):
-    """``ContextRenderer`` objects store information about how
+    """
+    ``ContextRenderer`` objects store information about how
     a source or source group is rendered with a particular rendering style, along with
     information for loading the render context in a database-efficient
     manner.
@@ -1270,7 +1288,8 @@ class ContextRenderer(models.Model):
             return ''
 
     def render_context_to_text_html_templates(self, context):
-        """Render the templates with the provided context.
+        """
+        Render the templates with the provided context.
 
         Args:
           A loaded context.
