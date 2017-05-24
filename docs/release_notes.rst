@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+
+v0.7.0
+------
+
+* Add creation time for mediums so events can be queried per medium for after medium creation
+
 v0.6.0
 ------
 
