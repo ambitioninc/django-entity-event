@@ -1,6 +1,10 @@
 Release Notes
 =============
 
+v0.7.1
+------
+
+* Increase the uuid length
 
 v0.7.0
 ------
