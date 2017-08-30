@@ -1018,7 +1018,7 @@ class Event(models.Model):
     context = jsonfield.JSONField()
     time = models.DateTimeField(auto_now_add=True, db_index=True)
     time_expires = models.DateTimeField(default=datetime.max, db_index=True)
-    uuid = models.CharField(max_length=128, unique=True)
+    uuid = models.CharField(max_length=512, unique=True)
 
     objects = EventManager()
 
