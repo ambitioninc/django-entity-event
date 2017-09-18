@@ -64,6 +64,9 @@ class DefaultContextSerializerTests(TransactionTestCase):
         # Call the method
         response = self.serializer.serialize_model(model)
 
+        # Evaluate the fk_m2m because later djangos return a queryset
+        response['fk_m2m'] = list(response['fk_m2m'])
+
         # Assert that we have a proper response
         self.assertEqual(
             response,
