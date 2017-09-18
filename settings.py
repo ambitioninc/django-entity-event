@@ -13,9 +13,9 @@ def configure_settings():
         if test_db is None:
             db_config = {
                 'ENGINE': 'django.db.backends.postgresql_psycopg2',
-                'NAME': 'ambition',
-                'USER': 'ambition',
-                'PASSWORD': 'ambition',
+                'NAME': 'ambition_dev',
+                'USER': 'postgres',
+                'PASSWORD': '',
                 'HOST': 'db'
             }
         elif test_db == 'postgres':
@@ -39,6 +39,12 @@ def configure_settings():
             DATABASES={
                 'default': db_config,
             },
+            TEMPLATES=[
+                {
+                    'BACKEND': 'django.template.backends.django.DjangoTemplates',
+                    'APP_DIRS': True,
+                },
+            ],
             INSTALLED_APPS=(
                 'django.contrib.auth',
                 'django.contrib.contenttypes',
