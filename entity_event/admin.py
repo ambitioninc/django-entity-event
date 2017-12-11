@@ -3,7 +3,6 @@ from uuid import uuid1
 
 from django import forms
 from django.contrib import admin
-from django.forms.extras.widgets import SelectDateWidget
 
 from entity_event.models import (
     AdminEvent, Event, EventActor, EventSeen, Medium, Source, SourceGroup, Subscription, Unsubscription
@@ -13,7 +12,7 @@ from entity_event.models import (
 class AdminEventForm(forms.ModelForm):
     source = forms.ModelChoiceField(queryset=Source.objects.all())  # initial = Source.objects.get(name='admin')
     text = forms.CharField(widget=forms.Textarea(attrs={'rows': '3', 'cols': '60'}))
-    expires_date = forms.DateField(widget=SelectDateWidget(), required=False)
+    expires_date = forms.DateField(widget=forms.SelectDateWidget(), required=False)
     expires_time = forms.TimeField(label='Expires time (UTC 24 hr) E.g. 18:25', required=False)
 
     class Meta:
