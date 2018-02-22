@@ -1,9 +1,11 @@
 import json
+from django import VERSION
 from django.test.testcases import TransactionTestCase
 from django_dynamic_fixture import G
 from mock import patch, call
 
 from entity_event.context_serializer import DefaultContextSerializer
+from entity_event.tests.models import TestModel
 
 
 class DefaultContextSerializerTests(TransactionTestCase):
@@ -53,8 +55,6 @@ class DefaultContextSerializerTests(TransactionTestCase):
         self.assertEqual(response, 'test')
 
     def test_serialize_model(self):
-        from entity_event.tests.models import TestModel
-
         # Create a model to test with
         model = G(TestModel)
 
@@ -63,6 +63,15 @@ class DefaultContextSerializerTests(TransactionTestCase):
 
         # Call the method
         response = self.serializer.serialize_model(model)
+
+        fk_value = {
+            'id': model.fk.id,
+            'value': model.fk.value
+        }
+
+        # Django 2.0 doesn't turn select related into a dict
+        if VERSION[0] >= 2:
+            fk_value = model.fk.id
 
         # Evaluate the fk_m2m because later djangos return a queryset
         response['fk_m2m'] = list(response['fk_m2m'])
@@ -73,10 +82,7 @@ class DefaultContextSerializerTests(TransactionTestCase):
             {
                 'fk_m2m': [],
                 'fk2': model.fk2.id,
-                'fk': {
-                    'id': model.fk.id,
-                    'value': model.fk.value
-                },
+                'fk': fk_value,
                 'id': model.id,
                 'value': model.value
             }

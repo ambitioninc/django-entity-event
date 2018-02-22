@@ -41,7 +41,7 @@ setup(
     ],
     license='MIT',
     install_requires=[
-        'cached-property>=0.1.5',
+        'cached-property>=1.3.1',
         'Django>=1.11',
         'django-entity>=2.0.0',
         'jsonfield>=0.9.20',
