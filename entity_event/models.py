@@ -80,7 +80,7 @@ class Medium(models.Model):
     # If a context loader has been defined for this rendering style along with the appropriate
     # source, the renderer will be used. If a context renderer has not been set up with this
     # rendering style, it will try to use the default style configured in settings.
-    rendering_style = models.ForeignKey('RenderingStyle', null=True, on_delete=models.CASCADE)
+    rendering_style = models.ForeignKey('entity_event.RenderingStyle', null=True, on_delete=models.CASCADE)
 
     # These values are passed in as additional context to whatever event is being rendered.
     additional_context = jsonfield.JSONField(null=True, default=None)
@@ -636,7 +636,7 @@ class Source(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
-    group = models.ForeignKey('SourceGroup', on_delete=models.CASCADE)
+    group = models.ForeignKey('entity_event.SourceGroup', on_delete=models.CASCADE)
 
     def __str__(self):
         """
@@ -710,9 +710,9 @@ class Unsubscription(models.Model):
     via the ``Medium`` object. That is, once the object is created, no
     more work is needed to unsubscribe them.
     """
-    entity = models.ForeignKey(Entity, on_delete=models.CASCADE)
-    medium = models.ForeignKey('Medium', on_delete=models.CASCADE)
-    source = models.ForeignKey('Source', on_delete=models.CASCADE)
+    entity = models.ForeignKey('entity.Entity', on_delete=models.CASCADE)
+    medium = models.ForeignKey('entity_event.Medium', on_delete=models.CASCADE)
+    source = models.ForeignKey('entity_event.Source', on_delete=models.CASCADE)
 
     def __str__(self):
         """
@@ -807,10 +807,10 @@ class Subscription(models.Model):
     ``Medium.followed_by`` methods, but could be extended by
     subclasses of Medium.
     """
-    medium = models.ForeignKey('Medium', on_delete=models.CASCADE)
-    source = models.ForeignKey('Source', on_delete=models.CASCADE)
-    entity = models.ForeignKey(Entity, related_name='+', on_delete=models.CASCADE)
-    sub_entity_kind = models.ForeignKey(EntityKind, null=True, related_name='+', default=None, on_delete=models.CASCADE)
+    medium = models.ForeignKey('entity_event.Medium', on_delete=models.CASCADE)
+    source = models.ForeignKey('entity_event.Source', on_delete=models.CASCADE)
+    entity = models.ForeignKey('entity.Entity', related_name='+', on_delete=models.CASCADE)
+    sub_entity_kind = models.ForeignKey('entity.EntityKind', null=True, related_name='+', default=None, on_delete=models.CASCADE)
     only_following = models.BooleanField(default=True)
 
     objects = SubscriptionQuerySet.as_manager()
@@ -1014,7 +1014,7 @@ class Event(models.Model):
     limited amount of data makes sense to store in the context. This
     is further documented in the ``Source`` documentation.
     """
-    source = models.ForeignKey('Source', on_delete=models.CASCADE)
+    source = models.ForeignKey('entity_event.Source', on_delete=models.CASCADE)
     context = jsonfield.JSONField()
     time = models.DateTimeField(auto_now_add=True, db_index=True)
     time_expires = models.DateTimeField(default=datetime.max, db_index=True)
@@ -1097,8 +1097,8 @@ class EventActor(models.Model):
     be created as part of the creation of ``Event`` objects, using
     ``Event.objects.create_event``.
     """
-    event = models.ForeignKey('Event', on_delete=models.CASCADE)
-    entity = models.ForeignKey(Entity, on_delete=models.CASCADE)
+    event = models.ForeignKey('entity_event.Event', on_delete=models.CASCADE)
+    entity = models.ForeignKey('entity.Entity', on_delete=models.CASCADE)
 
     def __str__(self):
         """
@@ -1123,8 +1123,8 @@ class EventSeen(models.Model):
     be created by using the ``EventQuerySet.mark_seen`` method,
     available on the QuerySets returned by the event querying methods.
     """
-    event = models.ForeignKey('Event', on_delete=models.CASCADE)
-    medium = models.ForeignKey('Medium', on_delete=models.CASCADE)
+    event = models.ForeignKey('entity_event.Event', on_delete=models.CASCADE)
+    medium = models.ForeignKey('entity_event.Medium', on_delete=models.CASCADE)
     time_seen = models.DateTimeField(default=datetime.utcnow)
 
     class Meta:
@@ -1249,11 +1249,11 @@ class ContextRenderer(models.Model):
     html_template = models.TextField(default='')
 
     # The source or source group of the event. It can only be one or the other
-    source = models.ForeignKey(Source, null=True, on_delete=models.CASCADE)
-    source_group = models.ForeignKey(SourceGroup, null=True, on_delete=models.CASCADE)
+    source = models.ForeignKey('entity_event.Source', null=True, on_delete=models.CASCADE)
+    source_group = models.ForeignKey('entity_event.SourceGroup', null=True, on_delete=models.CASCADE)
 
     # The rendering style. Used to associated it with a medium
-    rendering_style = models.ForeignKey(RenderingStyle, on_delete=models.CASCADE)
+    rendering_style = models.ForeignKey('entity_event.RenderingStyle', on_delete=models.CASCADE)
 
     # Contains hints on how to fetch the context from the database
     context_hints = jsonfield.JSONField(null=True, default=None)
