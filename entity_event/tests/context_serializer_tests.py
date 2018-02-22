@@ -64,15 +64,6 @@ class DefaultContextSerializerTests(TransactionTestCase):
         # Call the method
         response = self.serializer.serialize_model(model)
 
-        fk_value = {
-            'id': model.fk.id,
-            'value': model.fk.value
-        }
-
-        # Django 2.0 doesn't turn select related into a dict
-        if VERSION[0] >= 2:
-            fk_value = model.fk.id
-
         # Evaluate the fk_m2m because later djangos return a queryset
         response['fk_m2m'] = list(response['fk_m2m'])
 
@@ -82,7 +73,10 @@ class DefaultContextSerializerTests(TransactionTestCase):
             {
                 'fk_m2m': [],
                 'fk2': model.fk2.id,
-                'fk': fk_value,
+                'fk': {
+                    'id': model.fk.id,
+                    'value': model.fk.value
+                },
                 'id': model.id,
                 'value': model.value
             }
