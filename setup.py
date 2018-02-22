@@ -45,7 +45,8 @@ setup(
         'Django>=1.11',
         'django-entity>=2.0.0',
         'jsonfield>=0.9.20',
-        'six'
+        'six',
+        'django-activatable-model==1.0.1a1'  # TODO: remove this
     ],
     tests_require=[
         'psycopg2',
