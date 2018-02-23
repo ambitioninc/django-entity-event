@@ -16,7 +16,8 @@ matrix:
     - { python: 3.6, env: DJANGO=1.10 }
     - { python: 3.6, env: DJANGO=1.11 }
 install:
-  - pip install -q coverage flake8 Django$DJANGO django-nose
+  - pip install -q Django==$DJANGO
+  - pip install -r requirements/tests.txt
   - pip install -r requirements/docs.txt
 before_script:
   - psql -c 'CREATE DATABASE entity_event;' -U postgres
@@ -24,3 +25,5 @@ script:
   - flake8 .
   - coverage run setup.py test
   - coverage report --fail-under=100
+notifications:
+    email: false
