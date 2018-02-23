@@ -31,24 +31,23 @@ setup(
     classifiers=[
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Framework :: Django',
-        'Framework :: Django :: 1.9',
-        'Framework :: Django :: 1.10',
         'Framework :: Django :: 1.11',
+        'Framework :: Django :: 2.0',
     ],
     license='MIT',
     install_requires=[
-        'cached-property>=0.1.5',
-        'Django>=1.9',
-        'django-entity>=1.17.0',
+        'cached-property>=1.3.1',
+        'Django>=1.11',
+        'django-entity>=2.0.0',
         'jsonfield>=0.9.20',
-        'six'
+        'six',
+        'django-activatable-model==1.0.1a1'  # TODO: remove this
     ],
     tests_require=[
         'psycopg2',
