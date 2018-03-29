@@ -46,10 +46,9 @@ setup(
     install_requires=[
         'cached-property>=1.3.1',
         'Django>=1.10',
-        'django-entity>=2.0.0',
+        'django-entity>=3.0.0',
         'jsonfield>=0.9.20',
         'six',
-        'django-activatable-model==1.0.0'
     ],
     tests_require=[
         'psycopg2',
