@@ -1,5 +1,4 @@
 import json
-from django import VERSION
 from django.test.testcases import TransactionTestCase
 from django_dynamic_fixture import G
 from mock import patch, call

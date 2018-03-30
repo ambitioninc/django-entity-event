@@ -10,7 +10,7 @@ from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
 from django.template import Context, Template
 from django.utils.encoding import python_2_unicode_compatible
-from entity.models import Entity, EntityKind, EntityRelationship
+from entity.models import Entity, EntityRelationship
 import jsonfield
 
 from entity_event.context_serializer import DefaultContextSerializer
@@ -810,7 +810,9 @@ class Subscription(models.Model):
     medium = models.ForeignKey('entity_event.Medium', on_delete=models.CASCADE)
     source = models.ForeignKey('entity_event.Source', on_delete=models.CASCADE)
     entity = models.ForeignKey('entity.Entity', related_name='+', on_delete=models.CASCADE)
-    sub_entity_kind = models.ForeignKey('entity.EntityKind', null=True, related_name='+', default=None, on_delete=models.CASCADE)
+    sub_entity_kind = models.ForeignKey(
+        'entity.EntityKind', null=True, related_name='+', default=None, on_delete=models.CASCADE
+    )
     only_following = models.BooleanField(default=True)
 
     objects = SubscriptionQuerySet.as_manager()
