@@ -206,6 +206,8 @@ class EventManagerCreateEventTest(TestCase):
             'uuid': '2'
         }]
         events = Event.objects.create_events(event_kwargs)
+        events = events.sort(key=lambda x: x.uuid)
+
         self.assertEqual(len(events), 2)
 
         self.assertEqual(events[0].uuid, '1')
