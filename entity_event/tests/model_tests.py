@@ -181,6 +181,17 @@ class EventManagerCreateEventTest(TestCase):
         e = Event.objects.create_event(context={'hi': 'hi'}, source=source, ignore_duplicates=True)
         self.assertIsNone(e)
 
+    def test_create_events(self):
+        """
+
+        """
+        source = G(Source)
+
+        event_kwargs = [{
+
+        }]
+        # Event.objects.create_events()
+
 
 class EventManagerQuerySetTest(TestCase):
     def setUp(self):

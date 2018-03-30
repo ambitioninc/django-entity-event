@@ -966,26 +966,71 @@ class EventManager(models.Manager):
             ensure that an event with the give ``uuid`` does not exist
             before attempting to create the event. Setting this to
             ``True`` allows the creator of events to gracefully ensure
-            no duplicates are created.
+            no duplicates are attempted to be created. There is a uniqueness constraint on uuid
+            so it will raise an exception if duplicates are allowed and submitted.
 
         :rtype: Event
         :returns: The created event. Alternatively if a duplicate
             event already exists and ``ignore_duplicates`` is
             ``True``, it will return ``None``.
         """
-        if ignore_duplicates and self.filter(uuid=kwargs.get('uuid', '')).exists():
-            return None
+        kwargs['actors'] = actors
+        kwargs['ignore_duplicates'] = ignore_duplicates
 
-        event = self.create(**kwargs)
+        events = self.create_events([kwargs])
 
-        # Allow user to pass pks for actors
-        actors = [
-            a.id if isinstance(a, Entity) else a
-            for a in actors
-        ] if actors else []
+        if events:
+            return events[0]
 
-        EventActor.objects.bulk_create([EventActor(entity_id=actor, event=event) for actor in actors])
-        return event
+        return None
+
+    def create_events(self, kwargs_list):
+        """
+        Create events in bulk to save on queries. Each element in the kwargs list should be a dict with the same set
+        of arguments you would normally pass to create_event
+        :param kwargs_list: list of kwargs dicts
+        :return: list of Event
+        """
+        # Build map of uuid to event info
+        uuid_map = {
+            kwargs.get('uuid', ''): {
+                'actors': kwargs.pop('actors', []),
+                'ignore_duplicates': kwargs.pop('ignore_duplicates', False),
+                'event_kwargs': kwargs
+
+            }
+            for kwargs in kwargs_list
+        }
+
+        # Check for uuids
+        uuid_set = set(Event.objects.filter(uuid__in=uuid_map.keys()).values_list('uuid', flat=True))
+
+        # Set a flag for whether each uuid exists
+        for uuid, event_dict in uuid_map.items():
+            event_dict['exists'] = uuid in uuid_set
+
+        # Build list of events to bulk create
+        events_to_create = []
+        for uuid, event_dict in uuid_map.items():
+            # If the event doesn't already exist or the event does exist but we are allowing duplicates
+            if not event_dict['exists'] or not event_dict['ignore_duplicates']:
+                events_to_create.append(Event(**event_dict['event_kwargs']))
+
+        # Bulk create the events
+        created_events = Event.objects.bulk_create(events_to_create)
+
+        # Build list of EventActor objects to bulk create
+        event_actors_to_create = []
+        for created_event in created_events:
+            event_dict = uuid_map[created_event.uuid]
+            if event_dict['actors'] is not None:
+                for actor in event_dict['actors']:
+                    actor_id = actor.id if hasattr(actor, 'id') else actor
+                    event_actors_to_create.append(EventActor(entity_id=actor_id, event=created_event))
+
+        EventActor.objects.bulk_create(event_actors_to_create)
+
+        return created_events
 
 
 @python_2_unicode_compatible
