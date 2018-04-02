@@ -10,7 +10,7 @@ from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
 from django.template import Context, Template
 from django.utils.encoding import python_2_unicode_compatible
-from entity.models import Entity, EntityKind, EntityRelationship
+from entity.models import Entity, EntityRelationship
 import jsonfield
 
 from entity_event.context_serializer import DefaultContextSerializer
@@ -80,7 +80,7 @@ class Medium(models.Model):
     # If a context loader has been defined for this rendering style along with the appropriate
     # source, the renderer will be used. If a context renderer has not been set up with this
     # rendering style, it will try to use the default style configured in settings.
-    rendering_style = models.ForeignKey('RenderingStyle', null=True)
+    rendering_style = models.ForeignKey('entity_event.RenderingStyle', null=True, on_delete=models.CASCADE)
 
     # These values are passed in as additional context to whatever event is being rendered.
     additional_context = jsonfield.JSONField(null=True, default=None)
@@ -636,7 +636,7 @@ class Source(models.Model):
     name = models.CharField(max_length=64, unique=True)
     display_name = models.CharField(max_length=64)
     description = models.TextField()
-    group = models.ForeignKey('SourceGroup')
+    group = models.ForeignKey('entity_event.SourceGroup', on_delete=models.CASCADE)
 
     def __str__(self):
         """
@@ -710,9 +710,9 @@ class Unsubscription(models.Model):
     via the ``Medium`` object. That is, once the object is created, no
     more work is needed to unsubscribe them.
     """
-    entity = models.ForeignKey(Entity)
-    medium = models.ForeignKey('Medium')
-    source = models.ForeignKey('Source')
+    entity = models.ForeignKey('entity.Entity', on_delete=models.CASCADE)
+    medium = models.ForeignKey('entity_event.Medium', on_delete=models.CASCADE)
+    source = models.ForeignKey('entity_event.Source', on_delete=models.CASCADE)
 
     def __str__(self):
         """
@@ -807,10 +807,12 @@ class Subscription(models.Model):
     ``Medium.followed_by`` methods, but could be extended by
     subclasses of Medium.
     """
-    medium = models.ForeignKey('Medium')
-    source = models.ForeignKey('Source')
-    entity = models.ForeignKey(Entity, related_name='+')
-    sub_entity_kind = models.ForeignKey(EntityKind, null=True, related_name='+', default=None)
+    medium = models.ForeignKey('entity_event.Medium', on_delete=models.CASCADE)
+    source = models.ForeignKey('entity_event.Source', on_delete=models.CASCADE)
+    entity = models.ForeignKey('entity.Entity', related_name='+', on_delete=models.CASCADE)
+    sub_entity_kind = models.ForeignKey(
+        'entity.EntityKind', null=True, related_name='+', default=None, on_delete=models.CASCADE
+    )
     only_following = models.BooleanField(default=True)
 
     objects = SubscriptionQuerySet.as_manager()
@@ -966,26 +968,71 @@ class EventManager(models.Manager):
             ensure that an event with the give ``uuid`` does not exist
             before attempting to create the event. Setting this to
             ``True`` allows the creator of events to gracefully ensure
-            no duplicates are created.
+            no duplicates are attempted to be created. There is a uniqueness constraint on uuid
+            so it will raise an exception if duplicates are allowed and submitted.
 
         :rtype: Event
         :returns: The created event. Alternatively if a duplicate
             event already exists and ``ignore_duplicates`` is
             ``True``, it will return ``None``.
         """
-        if ignore_duplicates and self.filter(uuid=kwargs.get('uuid', '')).exists():
-            return None
+        kwargs['actors'] = actors
+        kwargs['ignore_duplicates'] = ignore_duplicates
 
-        event = self.create(**kwargs)
+        events = self.create_events([kwargs])
 
-        # Allow user to pass pks for actors
-        actors = [
-            a.id if isinstance(a, Entity) else a
-            for a in actors
-        ] if actors else []
+        if events:
+            return events[0]
 
-        EventActor.objects.bulk_create([EventActor(entity_id=actor, event=event) for actor in actors])
-        return event
+        return None
+
+    def create_events(self, kwargs_list):
+        """
+        Create events in bulk to save on queries. Each element in the kwargs list should be a dict with the same set
+        of arguments you would normally pass to create_event
+        :param kwargs_list: list of kwargs dicts
+        :return: list of Event
+        """
+        # Build map of uuid to event info
+        uuid_map = {
+            kwargs.get('uuid', ''): {
+                'actors': kwargs.pop('actors', []),
+                'ignore_duplicates': kwargs.pop('ignore_duplicates', False),
+                'event_kwargs': kwargs
+
+            }
+            for kwargs in kwargs_list
+        }
+
+        # Check for uuids
+        uuid_set = set(Event.objects.filter(uuid__in=uuid_map.keys()).values_list('uuid', flat=True))
+
+        # Set a flag for whether each uuid exists
+        for uuid, event_dict in uuid_map.items():
+            event_dict['exists'] = uuid in uuid_set
+
+        # Build list of events to bulk create
+        events_to_create = []
+        for uuid, event_dict in uuid_map.items():
+            # If the event doesn't already exist or the event does exist but we are allowing duplicates
+            if not event_dict['exists'] or not event_dict['ignore_duplicates']:
+                events_to_create.append(Event(**event_dict['event_kwargs']))
+
+        # Bulk create the events
+        created_events = Event.objects.bulk_create(events_to_create)
+
+        # Build list of EventActor objects to bulk create
+        event_actors_to_create = []
+        for created_event in created_events:
+            event_dict = uuid_map[created_event.uuid]
+            if event_dict['actors'] is not None:
+                for actor in event_dict['actors']:
+                    actor_id = actor.id if hasattr(actor, 'id') else actor
+                    event_actors_to_create.append(EventActor(entity_id=actor_id, event=created_event))
+
+        EventActor.objects.bulk_create(event_actors_to_create)
+
+        return created_events
 
 
 @python_2_unicode_compatible
@@ -1014,7 +1061,7 @@ class Event(models.Model):
     limited amount of data makes sense to store in the context. This
     is further documented in the ``Source`` documentation.
     """
-    source = models.ForeignKey('Source')
+    source = models.ForeignKey('entity_event.Source', on_delete=models.CASCADE)
     context = jsonfield.JSONField()
     time = models.DateTimeField(auto_now_add=True, db_index=True)
     time_expires = models.DateTimeField(default=datetime.max, db_index=True)
@@ -1097,8 +1144,8 @@ class EventActor(models.Model):
     be created as part of the creation of ``Event`` objects, using
     ``Event.objects.create_event``.
     """
-    event = models.ForeignKey('Event')
-    entity = models.ForeignKey(Entity)
+    event = models.ForeignKey('entity_event.Event', on_delete=models.CASCADE)
+    entity = models.ForeignKey('entity.Entity', on_delete=models.CASCADE)
 
     def __str__(self):
         """
@@ -1123,8 +1170,8 @@ class EventSeen(models.Model):
     be created by using the ``EventQuerySet.mark_seen`` method,
     available on the QuerySets returned by the event querying methods.
     """
-    event = models.ForeignKey('Event')
-    medium = models.ForeignKey('Medium')
+    event = models.ForeignKey('entity_event.Event', on_delete=models.CASCADE)
+    medium = models.ForeignKey('entity_event.Medium', on_delete=models.CASCADE)
     time_seen = models.DateTimeField(default=datetime.utcnow)
 
     class Meta:
@@ -1249,11 +1296,11 @@ class ContextRenderer(models.Model):
     html_template = models.TextField(default='')
 
     # The source or source group of the event. It can only be one or the other
-    source = models.ForeignKey(Source, null=True)
-    source_group = models.ForeignKey(SourceGroup, null=True)
+    source = models.ForeignKey('entity_event.Source', null=True, on_delete=models.CASCADE)
+    source_group = models.ForeignKey('entity_event.SourceGroup', null=True, on_delete=models.CASCADE)
 
     # The rendering style. Used to associated it with a medium
-    rendering_style = models.ForeignKey(RenderingStyle)
+    rendering_style = models.ForeignKey('entity_event.RenderingStyle', on_delete=models.CASCADE)
 
     # Contains hints on how to fetch the context from the database
     context_hints = jsonfield.JSONField(null=True, default=None)
