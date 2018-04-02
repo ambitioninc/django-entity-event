@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+v1.0.0
+------
+* Add Django 2.0 support
+* Use tox for testing more versions
+* Bulk create events to save on queries
+
+
 v0.8.0
 ------
 * Drop Django 1.8 support

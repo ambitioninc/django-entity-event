@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 from django.db import models, migrations
+import django.db.models.deletion
 import datetime
 import jsonfield.fields
 
@@ -45,8 +46,8 @@ class Migration(migrations.Migration):
             name='EventActor',
             fields=[
                 ('id', models.AutoField(serialize=False, primary_key=True, auto_created=True, verbose_name='ID')),
-                ('entity', models.ForeignKey(to='entity.Entity')),
-                ('event', models.ForeignKey(to='entity_event.Event')),
+                ('entity', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity.Entity')),
+                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.Event')),
             ],
             options={
             },
@@ -57,7 +58,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(serialize=False, primary_key=True, auto_created=True, verbose_name='ID')),
                 ('time_seen', models.DateTimeField(default=datetime.datetime.utcnow)),
-                ('event', models.ForeignKey(to='entity_event.Event')),
+                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.Event')),
             ],
             options={
             },
@@ -116,10 +117,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(serialize=False, primary_key=True, auto_created=True, verbose_name='ID')),
                 ('only_following', models.BooleanField(default=True)),
-                ('entity', models.ForeignKey(related_name='+', to='entity.Entity')),
-                ('medium', models.ForeignKey(to='entity_event.Medium')),
-                ('source', models.ForeignKey(to='entity_event.Source')),
-                ('sub_entity_kind', models.ForeignKey(null=True, related_name='+', to='entity.EntityKind', default=None)),
+                ('entity', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='+', to='entity.Entity')),
+                ('medium', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.Medium')),
+                ('source', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.Source')),
+                ('sub_entity_kind', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, null=True, related_name='+', to='entity.EntityKind', default=None)),
             ],
             options={
             },
@@ -129,9 +130,9 @@ class Migration(migrations.Migration):
             name='Unsubscription',
             fields=[
                 ('id', models.AutoField(serialize=False, primary_key=True, auto_created=True, verbose_name='ID')),
-                ('entity', models.ForeignKey(to='entity.Entity')),
-                ('medium', models.ForeignKey(to='entity_event.Medium')),
-                ('source', models.ForeignKey(to='entity_event.Source')),
+                ('entity', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity.Entity')),
+                ('medium', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.Medium')),
+                ('source', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.Source')),
             ],
             options={
             },
@@ -140,19 +141,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='source',
             name='group',
-            field=models.ForeignKey(to='entity_event.SourceGroup'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.SourceGroup'),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='medium',
             name='rendering_style',
-            field=models.ForeignKey(to='entity_event.RenderingStyle', null=True),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.RenderingStyle', null=True),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='eventseen',
             name='medium',
-            field=models.ForeignKey(to='entity_event.Medium'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.Medium'),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(
@@ -162,25 +163,25 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='source',
-            field=models.ForeignKey(to='entity_event.Source'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.Source'),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='contextrenderer',
             name='rendering_style',
-            field=models.ForeignKey(to='entity_event.RenderingStyle'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.RenderingStyle'),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='contextrenderer',
             name='source',
-            field=models.ForeignKey(to='entity_event.Source', null=True),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.Source', null=True),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='contextrenderer',
             name='source_group',
-            field=models.ForeignKey(to='entity_event.SourceGroup', null=True),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='entity_event.SourceGroup', null=True),
             preserve_default=True,
         ),
         migrations.AlterUniqueTogether(

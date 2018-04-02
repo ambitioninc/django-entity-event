@@ -181,6 +181,93 @@ class EventManagerCreateEventTest(TestCase):
         e = Event.objects.create_event(context={'hi': 'hi'}, source=source, ignore_duplicates=True)
         self.assertIsNone(e)
 
+    def test_create_events(self):
+        """
+        Tests the bulk event creation to make sure all data gets set correctly
+        """
+        source = G(Source)
+        Event.objects.create_event(context={'hi': 'hi'}, source=source, ignore_duplicates=True)
+        actor1 = G(Entity)
+        actor2 = G(Entity)
+        actor3 = G(Entity)
+        actor4 = G(Entity)
+
+        event_kwargs = [{
+            'context': {'one': 'one'},
+            'source': source,
+            'ignore_duplicates': True,
+            'actors': [actor1, actor2],
+            'uuid': '1'
+        }, {
+            'context': {'two': 'two'},
+            'source': source,
+            'ignore_duplicates': True,
+            'actors': [actor2],
+            'uuid': '2'
+        }]
+        events = Event.objects.create_events(event_kwargs)
+        events.sort(key=lambda x: x.uuid)
+
+        self.assertEqual(len(events), 2)
+
+        self.assertEqual(events[0].uuid, '1')
+        self.assertEqual(events[0].context['one'], 'one')
+        self.assertEqual(events[0].source, source)
+        self.assertEqual(
+            {event_actor.entity_id for event_actor in events[0].eventactor_set.all()},
+            set([actor1.id, actor2.id])
+        )
+
+        self.assertEqual(events[1].uuid, '2')
+        self.assertEqual(events[1].context['two'], 'two')
+        self.assertEqual(events[1].source, source)
+        self.assertEqual(
+            {event_actor.entity_id for event_actor in events[1].eventactor_set.all()},
+            set([actor2.id])
+        )
+
+        # Add some events where one is a duplicate
+        event_kwargs = [{
+            'context': {'one': 'one'},
+            'source': source,
+            'ignore_duplicates': True,
+            'actors': [actor3, actor4],
+            'uuid': '1'
+        }, {
+            'context': {'three': 'three'},
+            'source': source,
+            'ignore_duplicates': True,
+            'actors': [actor3],
+            'uuid': '3'
+        }]
+        events = Event.objects.create_events(event_kwargs)
+        self.assertEqual(len(events), 1)
+
+        self.assertEqual(events[0].uuid, '3')
+        self.assertEqual(events[0].context['three'], 'three')
+        self.assertEqual(events[0].source, source)
+        self.assertEqual(
+            {event_actor.entity_id for event_actor in events[0].eventactor_set.all()},
+            set([actor3.id, actor3.id])
+        )
+
+        # All duplicates
+        event_kwargs = [{
+            'context': {'one': 'one'},
+            'source': source,
+            'ignore_duplicates': True,
+            'actors': [actor3, actor4],
+            'uuid': '1'
+        }, {
+            'context': {'three': 'three'},
+            'source': source,
+            'ignore_duplicates': True,
+            'actors': [actor3],
+            'uuid': '3'
+        }]
+        events = Event.objects.create_events(event_kwargs)
+        self.assertEqual(len(events), 0)
+
 
 class EventManagerQuerySetTest(TestCase):
     def setUp(self):
