@@ -4,6 +4,8 @@ from operator import or_
 from six.moves import reduce
 
 from cached_property import cached_property
+from django.contrib.postgres.fields import JSONField
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.query import QuerySet
@@ -11,7 +13,6 @@ from django.template.loader import render_to_string
 from django.template import Context, Template
 from django.utils.encoding import python_2_unicode_compatible
 from entity.models import Entity, EntityRelationship
-import jsonfield
 
 from entity_event.context_serializer import DefaultContextSerializer
 
@@ -83,7 +84,7 @@ class Medium(models.Model):
     rendering_style = models.ForeignKey('entity_event.RenderingStyle', null=True, on_delete=models.CASCADE)
 
     # These values are passed in as additional context to whatever event is being rendered.
-    additional_context = jsonfield.JSONField(null=True, default=None)
+    additional_context = JSONField(null=True, default=None, encoder=DjangoJSONEncoder)
 
     def __str__(self):
         """
@@ -1062,7 +1063,7 @@ class Event(models.Model):
     is further documented in the ``Source`` documentation.
     """
     source = models.ForeignKey('entity_event.Source', on_delete=models.CASCADE)
-    context = jsonfield.JSONField()
+    context = JSONField(encoder=DjangoJSONEncoder)
     time = models.DateTimeField(auto_now_add=True, db_index=True)
     time_expires = models.DateTimeField(default=datetime.max, db_index=True)
     uuid = models.CharField(max_length=512, unique=True)
@@ -1303,7 +1304,7 @@ class ContextRenderer(models.Model):
     rendering_style = models.ForeignKey('entity_event.RenderingStyle', on_delete=models.CASCADE)
 
     # Contains hints on how to fetch the context from the database
-    context_hints = jsonfield.JSONField(null=True, default=None)
+    context_hints = JSONField(null=True, default=None, encoder=DjangoJSONEncoder)
 
     class Meta:
         unique_together = ('source', 'rendering_style')
