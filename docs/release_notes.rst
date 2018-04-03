@@ -1,6 +1,10 @@
 Release Notes
 =============
 
+v1.1.0
+------
+* Use django's json field with encoder (drop 1.10)
+
 v1.0.0
 ------
 * Add Django 2.0 support
