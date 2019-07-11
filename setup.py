@@ -54,7 +54,8 @@ setup(
         'mock>=1.0.1',
         'coverage>=3.7.1',
         'freezegun',
-        'django-dynamic-fixture'
+        'django-dynamic-fixture',
+        'flake8==3.5.0',
     ],
     test_suite='run_tests.run_tests',
     include_package_data=True,
