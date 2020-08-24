@@ -8,8 +8,6 @@ python:
 
 env:
   matrix:
-    - DJANGO=2.0
-    - DJANGO=2.1
     - DJANGO=2.2
     - DJANGO=master
 
