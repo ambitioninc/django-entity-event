@@ -789,10 +789,7 @@ class UnicodeTest(TestCase):
 
     def test_event_formats(self):
         s = text_type(self.event)
-        print('this is where it is erroring')
-        print(s)
-        print(self.event.__dict__)
-        self.assertTrue(s.startswith('Test Source event at 201'))
+        self.assertTrue(s.startswith('Test Source event at'))
 
     def test_eventactor_formats(self):
         s = text_type(self.event_actor)
