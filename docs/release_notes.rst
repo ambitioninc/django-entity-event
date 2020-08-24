@@ -1,6 +1,10 @@
 Release Notes
 =============
 
+v1.2.1
+------
+* Increase model field lengths
+
 v1.2.0
 ------
 * Python 3.7
