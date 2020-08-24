@@ -1,9 +1,10 @@
 Release Notes
 =============
 
-v1.2.1
+v1.3.0
 ------
 * Increase model field lengths
+* Remove support for django 2.0, 2.1
 
 v1.2.0
 ------
