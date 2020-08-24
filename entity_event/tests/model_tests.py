@@ -789,7 +789,7 @@ class UnicodeTest(TestCase):
 
     def test_event_formats(self):
         s = text_type(self.event)
-        self.assertTrue(s.startswith('Test Source event at 201'))
+        self.assertTrue(s.startswith('Test Source event at'))
 
     def test_eventactor_formats(self):
         s = text_type(self.event_actor)

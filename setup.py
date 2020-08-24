@@ -18,6 +18,14 @@ def get_version():
         raise RuntimeError('Unable to find version string in {0}.'.format(VERSION_FILE))
 
 
+def get_lines(file_path):
+    return open(file_path, 'r').read().split('\n')
+
+
+install_requires = get_lines('requirements/requirements.txt')
+tests_require = get_lines('requirements/requirements-testing.txt')
+
+
 setup(
     name='django-entity-event',
     version=get_version(),
@@ -36,26 +44,11 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Framework :: Django',
-        'Framework :: Django :: 2.0',
-        'Framework :: Django :: 2.1',
         'Framework :: Django :: 2.2',
     ],
     license='MIT',
-    install_requires=[
-        'cached-property>=1.3.1',
-        'Django>=2.0',
-        'django-entity>=4.2.0',
-        'jsonfield>=0.9.20',
-        'six',
-    ],
-    tests_require=[
-        'psycopg2',
-        'django-nose>=1.4',
-        'mock>=1.0.1',
-        'coverage>=3.7.1',
-        'freezegun',
-        'django-dynamic-fixture',
-    ],
+    install_requires=install_requires,
+    tests_require=tests_require,
     test_suite='run_tests.run_tests',
     include_package_data=True,
     zip_safe=False,
