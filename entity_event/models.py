@@ -72,8 +72,8 @@ class Medium(models.Model):
     """
     # A name and display name for the medium along with a description for any
     # application display
-    name = models.CharField(max_length=64, unique=True)
-    display_name = models.CharField(max_length=64)
+    name = models.CharField(max_length=256, unique=True)
+    display_name = models.CharField(max_length=256)
     description = models.TextField()
     time_created = models.DateTimeField(auto_now_add=True)
 
@@ -634,8 +634,8 @@ class Source(models.Model):
     ``Subscription`` objects to route events of the given source to be
     handled by a given medium.
     """
-    name = models.CharField(max_length=64, unique=True)
-    display_name = models.CharField(max_length=64)
+    name = models.CharField(max_length=256, unique=True)
+    display_name = models.CharField(max_length=256)
     description = models.TextField()
     group = models.ForeignKey('entity_event.SourceGroup', on_delete=models.CASCADE)
 
@@ -668,8 +668,8 @@ class SourceGroup(models.Model):
     :param description: A human readable description of the source
         group.
     """
-    name = models.CharField(max_length=64, unique=True)
-    display_name = models.CharField(max_length=64)
+    name = models.CharField(max_length=256, unique=True)
+    display_name = models.CharField(max_length=256)
     description = models.TextField()
 
     def __str__(self):
@@ -1213,8 +1213,8 @@ class RenderingStyle(models.Model):
     similar rendering styles and allows context renderers to be used across
     mediums.
     """
-    name = models.CharField(max_length=64, unique=True)
-    display_name = models.CharField(max_length=64, default='')
+    name = models.CharField(max_length=256, unique=True)
+    display_name = models.CharField(max_length=256, default='')
 
     def __str__(self):
         return '{0} {1}'.format(self.display_name, self.name)
@@ -1288,7 +1288,7 @@ class ContextRenderer(models.Model):
     In the above case, `User` objects with the PKs 1, 3, 5, and 10 will be fetched and loaded into
     the event context whenever rendering is performed.
     """
-    name = models.CharField(max_length=64, unique=True)
+    name = models.CharField(max_length=256, unique=True)
 
     # The various templates that can be used for rendering
     text_template_path = models.CharField(max_length=256, default='')
