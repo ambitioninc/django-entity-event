@@ -1,6 +1,10 @@
 Release Notes
 =============
 
+v1.3.1
+------
+* Optimize a few querysets
+
 v1.3.0
 ------
 * Increase model field lengths
