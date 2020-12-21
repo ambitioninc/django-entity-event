@@ -173,12 +173,16 @@ class Medium(models.Model):
         subscription_q_objects = [
             Q(
                 eventactor__entity__in=self.followed_by(sub.subscribed_entities()),
-                source=sub.source
+                source_id=sub.source_id
             )
             for sub in subscriptions if sub.only_following
         ]
         subscription_q_objects.append(
-            Q(source__in=[sub.source for sub in subscriptions if not sub.only_following]))
+            Q(source_id__in=[
+                sub.source_id
+                for sub in subscriptions if not sub.only_following
+            ])
+        )
 
         events = events.cache_related().filter(reduce(or_, subscription_q_objects))
         return events
@@ -271,12 +275,12 @@ class Medium(models.Model):
         subscription_q_objects = [
             Q(
                 eventactor__entity__in=self.followed_by(entity),
-                source=sub.source
+                source_id=sub.source_id
             )
             for sub in subscriptions if sub.only_following
         ]
         subscription_q_objects.append(
-            Q(source__in=[sub.source for sub in subscriptions if not sub.only_following])
+            Q(source_id__in=[sub.source_id for sub in subscriptions if not sub.only_following])
         )
 
         return [
@@ -344,23 +348,29 @@ class Medium(models.Model):
         :returns: A list of tuples in the form ``(event, targets)`` where ``targets`` is a list of entities.
         """
         events = self.get_filtered_events(**event_filters)
-        subscriptions = Subscription.objects.filter(medium=self)
+        subscriptions = Subscription.objects.filter(medium=self).select_related('entity')
+
+        subscribed_cache = {}
+        for sub in subscriptions:
+            subscribed_cache[sub.id] = sub.subscribed_entities()
 
         event_pairs = []
         for event in events:
             targets = []
             for sub in subscriptions:
-                if event.source != sub.source:
+                if event.source_id != sub.source_id:
                     continue
 
-                subscribed = sub.subscribed_entities()
+                subscribed = subscribed_cache[sub.id]
 
                 if sub.only_following:
                     potential_targets = self.followers_of(
                         event.eventactor_set.values_list('entity__id', flat=True)
                     )
                     subscription_targets = list(Entity.objects.filter(
-                        Q(id__in=subscribed), Q(id__in=potential_targets)))
+                        Q(id__in=subscribed),
+                        Q(id__in=potential_targets)
+                    ))
                 else:
                     subscription_targets = list(subscribed)
 
@@ -838,12 +848,13 @@ class Subscription(models.Model):
         :rtype: EntityQuerySet
         :returns: A QuerySet of all the entities that are a part of this subscription.
         """
-        if self.sub_entity_kind is not None:
-            sub_entities = self.entity.sub_relationships.filter(
-                sub_entity__entity_kind=self.sub_entity_kind).values_list('sub_entity')
-            entities = Entity.objects.filter(id__in=sub_entities)
+        if self.sub_entity_kind_id is not None:
+            sub_entity_ids = self.entity.sub_relationships.filter(
+                sub_entity__entity_kind_id=self.sub_entity_kind_id
+            ).values_list('sub_entity_id', flat=True)
+            entities = Entity.objects.filter(id__in=sub_entity_ids)
         else:
-            entities = Entity.all_objects.filter(id=self.entity.id)
+            entities = Entity.all_objects.filter(id=self.entity_id)
         return entities
 
 
