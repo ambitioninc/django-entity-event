@@ -1,7 +1,7 @@
 Release Notes
 =============
 
-v1.4.0
+v2.0.0
 ------
 * Optimize a few querysets
 * Add support for python 3.8
