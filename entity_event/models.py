@@ -11,13 +11,11 @@ from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
 from django.template import Context, Template
-from django.utils.encoding import python_2_unicode_compatible
 from entity.models import Entity, EntityRelationship
 
 from entity_event.context_serializer import DefaultContextSerializer
 
 
-@python_2_unicode_compatible
 class Medium(models.Model):
     """
     A ``Medium`` is an object in the database that defines the method
@@ -602,7 +600,6 @@ class Medium(models.Model):
         return {e: e.render(self) for e in events}
 
 
-@python_2_unicode_compatible
 class Source(models.Model):
     """
     A ``Source`` is an object in the database that represents where
@@ -656,7 +653,6 @@ class Source(models.Model):
         return self.display_name
 
 
-@python_2_unicode_compatible
 class SourceGroup(models.Model):
     """
     A ``SourceGroup`` object is a high level categorization of
@@ -689,7 +685,6 @@ class SourceGroup(models.Model):
         return self.display_name
 
 
-@python_2_unicode_compatible
 class Unsubscription(models.Model):
     """
     Because django-entity-event allows for whole groups to be
@@ -749,7 +744,6 @@ class SubscriptionQuerySet(QuerySet):
         return self.select_related('medium', 'source', 'entity', 'sub_entity_kind')
 
 
-@python_2_unicode_compatible
 class Subscription(models.Model):
     """
     Which types of events are available to which mediums is controlled through ``Subscription`` objects. By creating a
@@ -1047,7 +1041,6 @@ class EventManager(models.Manager):
         return created_events
 
 
-@python_2_unicode_compatible
 class Event(models.Model):
     """
     ``Event`` objects store information about events. By storing
@@ -1144,7 +1137,6 @@ class AdminEvent(Event):
         proxy = True
 
 
-@python_2_unicode_compatible
 class EventActor(models.Model):
     """
     ``EventActor`` objects encode what entities were involved in an
@@ -1169,7 +1161,6 @@ class EventActor(models.Model):
         return s.format(eventid=eventid, entity=entity)
 
 
-@python_2_unicode_compatible
 class EventSeen(models.Model):
     """
     ``EventSeen`` objects store information about where and when an
@@ -1217,7 +1208,6 @@ def _unseen_event_ids(medium):
     return ids
 
 
-@python_2_unicode_compatible
 class RenderingStyle(models.Model):
     """
     Defines a rendering style. This is used to group together mediums that have
@@ -1231,7 +1221,6 @@ class RenderingStyle(models.Model):
         return '{0} {1}'.format(self.display_name, self.name)
 
 
-@python_2_unicode_compatible
 class ContextRenderer(models.Model):
     """
     ``ContextRenderer`` objects store information about how
