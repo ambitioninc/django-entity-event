@@ -576,7 +576,7 @@ class LoadContextsAndRenderersTest(TestCase):
         s = G(models.Source)
         rg = G(models.RenderingStyle)
         e = G(models.Event, context={'key': m1.id}, source=s)
-        medium = G(models.Medium, source=s, rendering_style=rg)
+        medium = G(models.Medium, rendering_style=rg)
         G(models.ContextRenderer, rendering_style=rg, source=s, context_hints={
             'key': {
                 'model_name': 'TestModel',
@@ -593,7 +593,7 @@ class LoadContextsAndRenderersTest(TestCase):
         s = G(models.Source)
         rs = G(models.RenderingStyle, name='short')
         e = G(models.Event, context={'key': m1.id}, source=s)
-        medium = G(models.Medium, source=s, rendering_style=None)
+        medium = G(models.Medium, rendering_style=None)
         G(models.ContextRenderer, rendering_style=rs, source=s, context_hints={
             'key': {
                 'model_name': 'TestModel',
@@ -614,8 +614,8 @@ class LoadContextsAndRenderersTest(TestCase):
         s2 = G(models.Source)
         rg1 = G(models.RenderingStyle)
         rg2 = G(models.RenderingStyle)
-        medium1 = G(models.Medium, source=s1, rendering_style=rg1)
-        medium2 = G(models.Medium, source=s2, rendering_style=rg2)
+        medium1 = G(models.Medium, rendering_style=rg1)
+        medium2 = G(models.Medium, rendering_style=rg2)
 
         cr1 = G(models.ContextRenderer, rendering_style=rg1, source=s1, context_hints={
             'key': {
@@ -738,8 +738,8 @@ class LoadContextsAndRenderersTest(TestCase):
         s2 = G(models.Source)
         rg1 = G(models.RenderingStyle)
         rg2 = G(models.RenderingStyle)
-        medium1 = G(models.Medium, source=s1, rendering_style=rg1)
-        medium2 = G(models.Medium, source=s2, rendering_style=rg2)
+        medium1 = G(models.Medium, rendering_style=rg1)
+        medium2 = G(models.Medium, rendering_style=rg2)
 
         G(models.ContextRenderer, rendering_style=rg1, source=s1, context_hints={
             'key': {
