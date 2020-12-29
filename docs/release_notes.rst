@@ -4,7 +4,6 @@ Release Notes
 v2.0.0
 ------
 * Optimize a few querysets
-* Add support for python 3.8
 * Add support for django 3.0, 3.1
 
 v1.3.0
