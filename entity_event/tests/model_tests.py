@@ -543,7 +543,13 @@ class MediumGetEventFiltersTest(TestCase):
         self.assertEqual(events.count(), 1)
 
     def test_is_not_seen(self):
-        filters = self.medium.get_filtered_events_queries(None, None, False, True, None)
+        filters = self.medium.get_filtered_events_queries(
+            start_time=None,
+            end_time=None,
+            seen=False,
+            include_expired=True,
+            actor=None
+        )
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 4)
 
@@ -556,7 +562,13 @@ class MediumGetEventFiltersTest(TestCase):
         Event.objects.filter(id__in=expected_ids).mark_seen(self.medium)
 
         # Make sure there are no unseen
-        filters = self.medium.get_filtered_events_queries(None, None, False, True, None)
+        filters = self.medium.get_filtered_events_queries(
+            start_time=None,
+            end_time=None,
+            seen=False,
+            include_expired=True,
+            actor=None
+        )
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 0)
 
@@ -564,7 +576,13 @@ class MediumGetEventFiltersTest(TestCase):
         EventSeen.objects.filter(medium=self.medium, event=self.event3).delete()
 
         # Make sure there is one unseen
-        filters = self.medium.get_filtered_events_queries(None, None, False, True, None)
+        filters = self.medium.get_filtered_events_queries(
+            start_time=None,
+            end_time=None,
+            seen=False,
+            include_expired=True,
+            actor=None
+        )
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 1)
         self.assertEqual(events[0].id, self.event3.id)
@@ -573,7 +591,13 @@ class MediumGetEventFiltersTest(TestCase):
         Event.objects.filter(id=self.event3.id).mark_seen(self.medium)
 
         # Make sure there are no unseen
-        filters = self.medium.get_filtered_events_queries(None, None, False, True, None)
+        filters = self.medium.get_filtered_events_queries(
+            start_time=None,
+            end_time=None,
+            seen=False,
+            include_expired=True,
+            actor=None
+        )
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 0)
 
@@ -582,13 +606,25 @@ class MediumGetEventFiltersTest(TestCase):
 
         # Make sure the new event shows up
         # Make sure there is one unseen
-        filters = self.medium.get_filtered_events_queries(None, None, False, True, None)
+        filters = self.medium.get_filtered_events_queries(
+            start_time=None,
+            end_time=None,
+            seen=False,
+            include_expired=True,
+            actor=None
+        )
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 1)
         self.assertEqual(events[0].id, self.event6.id)
 
         # Check the other medium
-        filters = self.medium2.get_filtered_events_queries(None, None, False, True, None)
+        filters = self.medium2.get_filtered_events_queries(
+            start_time=None,
+            end_time=None,
+            seen=False,
+            include_expired=True,
+            actor=None
+        )
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 6)
 
