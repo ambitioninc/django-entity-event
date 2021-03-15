@@ -509,7 +509,10 @@ class MediumGetFilteredEventsTest(TestCase):
 
 class MediumGetEventFiltersTest(TestCase):
     def setUp(self):
+        # Make a couple mediums
         self.medium = G(Medium)
+        self.medium2 = G(Medium)
+
         with freeze_time('2014-01-15'):
             self.event1 = G(Event, context={})
             self.event2 = G(Event, context={}, time_expires=datetime(5000, 1, 1))
@@ -583,6 +586,11 @@ class MediumGetEventFiltersTest(TestCase):
         events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 1)
         self.assertEqual(events[0].id, self.event6.id)
+
+        # Check the other medium
+        filters = self.medium2.get_filtered_events_queries(None, None, False, True, None)
+        events = Event.objects.filter(*filters)
+        self.assertEqual(events.count(), 6)
 
     def test_include_expires(self):
         filters = self.medium.get_filtered_events_queries(None, None, None, True, None)
