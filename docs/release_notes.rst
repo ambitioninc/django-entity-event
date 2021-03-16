@@ -1,6 +1,10 @@
 Release Notes
 =============
 
+v2.2.1
+------
+* Fix bad queryset check which would cause it to evaluate. Add explicit None check.
+
 v2.2.0
 ------
 * More optimizations for unseen events
