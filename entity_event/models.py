@@ -362,7 +362,7 @@ class Medium(models.Model):
         for event in events:
             targets = []
             for sub in subscriptions:
-                if event.source_id != sub.source_id:
+                if event.source_id != sub.source_id:  # pragma: no cover
                     continue
 
                 subscribed = subscribed_cache[sub.id]
@@ -1243,15 +1243,6 @@ def _unseen_event_ids(medium):
     """
     Return all events that have not been seen on this medium.
     """
-    # query = '''
-    # SELECT event.id
-    # FROM entity_event_event AS event
-    #     LEFT OUTER JOIN (SELECT *
-    #                      FROM entity_event_eventseen AS seen
-    #                      WHERE seen.medium_id=%s) AS eventseen
-    #         ON event.id = eventseen.event_id
-    # WHERE eventseen.medium_id IS NULL
-    # '''
     return Event.objects.annotate(
         event_seen_medium=models.FilteredRelation(
             'eventseen',
