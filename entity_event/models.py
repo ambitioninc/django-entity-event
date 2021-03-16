@@ -6,7 +6,7 @@ from six.moves import reduce
 from cached_property import cached_property
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import models, transaction
+from django.db import models, transaction, connection
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
@@ -480,7 +480,8 @@ class Medium(models.Model):
 
         # If we only want unseen events exclude events that have been seen for this medium
         elif seen is False:
-            filters.append(~Q(eventseen__medium=self))
+            unseen_ids = _unseen_event_ids(medium=self)
+            filters.append(Q(id__in=unseen_ids))
 
         # Filter by actor
         if actor is not None:
@@ -1216,20 +1217,24 @@ def _unseen_event_ids(medium):
     """
     Return all events that have not been seen on this medium.
     """
-    # query = '''
-    # SELECT event.id
-    # FROM entity_event_event AS event
-    #     LEFT OUTER JOIN (SELECT *
-    #                      FROM entity_event_eventseen AS seen
-    #                      WHERE seen.medium_id=%s) AS eventseen
-    #         ON event.id = eventseen.event_id
-    # WHERE eventseen.medium_id IS NULL
-    # '''
-    unseen_events = Event.objects.filter(
-        ~Q(eventseen__medium=medium)
-    )
-    ids = [e.id for e in unseen_events]
-    return ids
+    query = '''
+        SELECT
+            event.id
+        FROM
+            entity_event_event AS event
+        LEFT JOIN (
+            SELECT seen.event_id, seen.medium_id
+            FROM entity_event_eventseen AS seen
+            WHERE seen.medium_id=%s
+        ) AS eventseen
+        ON event.id = eventseen.event_id
+        WHERE eventseen.medium_id IS NULL
+    '''
+    with connection.cursor() as cursor:
+        cursor.execute(query, [medium.id])
+        rows = cursor.fetchall()
+
+    return [row[0] for row in rows]
 
 
 class RenderingStyle(models.Model):
