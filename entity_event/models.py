@@ -346,6 +346,7 @@ class Medium(models.Model):
         :returns: A list of tuples in the form ``(event, targets)`` where ``targets`` is a list of entities.
         """
         events = self.get_filtered_events(**event_filters)
+
         subscriptions = Subscription.objects.filter(medium=self).select_related('entity')
 
         subscribed_cache = {}
