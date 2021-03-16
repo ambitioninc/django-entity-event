@@ -346,6 +346,7 @@ class Medium(models.Model):
         :returns: A list of tuples in the form ``(event, targets)`` where ``targets`` is a list of entities.
         """
         events = self.get_filtered_events(**event_filters)
+
         subscriptions = Subscription.objects.filter(medium=self).select_related('entity')
 
         subscribed_cache = {}
@@ -454,32 +455,49 @@ class Medium(models.Model):
         :returns: A list of Q objects, which can be used as arguments
             to ``Event.objects.filter``.
         """
+
+        # Setup a default time to use
         now = datetime.utcnow()
+
+        # Keep track of the filters we want to apply
         filters = []
+
+        # If we have a start time add the filter
         if start_time is not None:
             filters.append(Q(time__gte=start_time))
+
+        # If we have an end time add the filter
         if end_time is not None:
             filters.append(Q(time__lte=end_time))
+
+        # If we are not including expired events, apply the now expiration time
         if not include_expired:
             filters.append(Q(time_expires__gte=now))
 
-        # Check explicitly for True and False as opposed to None
-        #   - `seen==False` gets unseen notifications
-        #   - `seen is None` does no seen/unseen filtering
+        # If we only want seen events join on the medium
         if seen is True:
             filters.append(Q(eventseen__medium=self))
+
+        # If we only want unseen events exclude events that have been seen for this medium
         elif seen is False:
-            unseen_ids = _unseen_event_ids(medium=self)
-            filters.append(Q(id__in=unseen_ids))
+            filters.append(~Q(eventseen__medium=self))
 
         # Filter by actor
         if actor is not None:
             filters.append(Q(eventactor__entity=actor))
 
+        # Return the filters to apply
         return filters
 
     def get_filtered_events(
-            self, start_time=None, end_time=None, seen=None, mark_seen=False, include_expired=False, actor=None):
+        self,
+        start_time=None,
+        end_time=None,
+        seen=None,
+        mark_seen=False,
+        include_expired=False,
+        actor=None
+    ):
         """
         Retrieves events, filters by event level filters, and marks them as
         seen if necessary.
@@ -487,8 +505,11 @@ class Medium(models.Model):
         :rtype: EventQuerySet
         :returns: All events which match the given filters.
         """
+
+        # What does this do???
         filtered_events_queries = self.get_filtered_events_queries(start_time, end_time, seen, include_expired, actor)
         events = Event.objects.filter(*filtered_events_queries)
+
         if seen is False and mark_seen:
             # Evaluate the event qset here and create a new queryset that is no longer filtered by
             # if the events are marked as seen. We do this because we want to mark the events
@@ -497,6 +518,7 @@ class Medium(models.Model):
             events = Event.objects.filter(id__in=list(e.id for e in events))
             events.mark_seen(self)
 
+        # Return the events
         return events
 
     def followed_by(self, entities):
@@ -1194,16 +1216,18 @@ def _unseen_event_ids(medium):
     """
     Return all events that have not been seen on this medium.
     """
-    query = '''
-    SELECT event.id
-    FROM entity_event_event AS event
-        LEFT OUTER JOIN (SELECT *
-                         FROM entity_event_eventseen AS seen
-                         WHERE seen.medium_id=%s) AS eventseen
-            ON event.id = eventseen.event_id
-    WHERE eventseen.medium_id IS NULL
-    '''
-    unseen_events = Event.objects.raw(query, params=[medium.id])
+    # query = '''
+    # SELECT event.id
+    # FROM entity_event_event AS event
+    #     LEFT OUTER JOIN (SELECT *
+    #                      FROM entity_event_eventseen AS seen
+    #                      WHERE seen.medium_id=%s) AS eventseen
+    #         ON event.id = eventseen.event_id
+    # WHERE eventseen.medium_id IS NULL
+    # '''
+    unseen_events = Event.objects.filter(
+        ~Q(eventseen__medium=medium)
+    )
     ids = [e.id for e in unseen_events]
     return ids
 

@@ -1,6 +1,10 @@
 Release Notes
 =============
 
+v2.1.0
+------
+* Optimize querying for unseen events
+
 v2.0.0
 ------
 * Optimize a few querysets
