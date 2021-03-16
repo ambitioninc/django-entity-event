@@ -411,8 +411,8 @@ class MediumEventsInterfacesTest(TestCase):
         )
         self.assertEqual(len(events), 2)
 
-        # only the events related to the entity should be marked seen
-        self.assertEqual(len(EventSeen.objects.all()), 2)
+        # The other medium should also get marked as seen
+        self.assertEqual(len(EventSeen.objects.all()), 4)
 
     def test_entity_events_basic_unsubscribed(self):
         G(Unsubscription, entity=self.p1, source=self.source_a, medium=self.medium_x)
@@ -551,7 +551,7 @@ class MediumGetFilteredEventsTest(TestCase):
         G(EventSeen, event=seen_from_medium_event)
 
         events = self.medium.get_filtered_events(seen=False)
-        self.assertEquals(set(events), {unseen_e, seen_from_medium_event})
+        self.assertEquals(set(events), {unseen_e, seen_from_medium_event, seen_from_other_medium_e})
 
 
 class MediumGetEventFiltersTest(TestCase):
@@ -597,7 +597,7 @@ class MediumGetEventFiltersTest(TestCase):
             include_expired=True,
             actor=None
         )
-        self.assertEqual(events.count(), 1)
+        self.assertEqual(events.count(), 3)
 
         events = self.medium2.get_filtered_events_queryset(
             start_time=datetime(2014, 1, 16),
@@ -606,7 +606,7 @@ class MediumGetEventFiltersTest(TestCase):
             include_expired=True,
             actor=None
         )
-        self.assertEqual(events.count(), 2)
+        self.assertEqual(events.count(), 3)
 
     def test_end_time(self):
         events = self.medium.get_filtered_events_queryset(
@@ -625,7 +625,7 @@ class MediumGetEventFiltersTest(TestCase):
             include_expired=True,
             actor=None
         )
-        self.assertEqual(events.count(), 0)
+        self.assertEqual(events.count(), 2)
 
     def test_is_seen(self):
         events = self.medium.get_filtered_events_queryset(
@@ -654,17 +654,17 @@ class MediumGetEventFiltersTest(TestCase):
             include_expired=True,
             actor=None
         )
-        self.assertEqual(events.count(), 2)
+        self.assertEqual(events.count(), 4)
 
         # Make sure these are the events we expect
         event_ids = {event.id for event in events}
-        expected_ids = {self.event2.id, self.event3.id}
+        expected_ids = {self.event2.id, self.event3.id, self.event4.id, self.event5.id}
         self.assertEqual(event_ids, expected_ids)
 
         # Mark these all as seen
         Event.objects.filter(id__in=expected_ids).mark_seen(self.medium)
 
-        # Make sure there are no unseen
+        # Make sure there are no unseen for medium1
         events = self.medium.get_filtered_events_queryset(
             start_time=None,
             end_time=None,
@@ -673,6 +673,16 @@ class MediumGetEventFiltersTest(TestCase):
             actor=None
         )
         self.assertEqual(events.count(), 0)
+
+        # Make sure there we still have unseen for medium 2
+        events = self.medium2.get_filtered_events_queryset(
+            start_time=None,
+            end_time=None,
+            seen=False,
+            include_expired=True,
+            actor=None
+        )
+        self.assertEqual(events.count(), 5)
 
         # Delete one of the events from seen
         EventSeen.objects.filter(medium=self.medium, event=self.event3).delete()
@@ -724,7 +734,7 @@ class MediumGetEventFiltersTest(TestCase):
             include_expired=True,
             actor=None
         )
-        self.assertEqual(events.count(), 2)
+        self.assertEqual(events.count(), 6)
 
     def test_include_expires(self):
         events = self.medium.get_filtered_events_queryset(
@@ -734,7 +744,7 @@ class MediumGetEventFiltersTest(TestCase):
             include_expired=True,
             actor=None
         )
-        self.assertEqual(events.count(), 3)
+        self.assertEqual(events.count(), 5)
 
         events = self.medium2.get_filtered_events_queryset(
             start_time=None,
@@ -743,7 +753,7 @@ class MediumGetEventFiltersTest(TestCase):
             include_expired=True,
             actor=None
         )
-        self.assertEqual(events.count(), 2)
+        self.assertEqual(events.count(), 5)
 
     def test_dont_include_expires(self):
         events = self.medium.get_filtered_events_queryset(
@@ -753,7 +763,7 @@ class MediumGetEventFiltersTest(TestCase):
             include_expired=False,
             actor=None
         )
-        self.assertEqual(events.count(), 3)
+        self.assertEqual(events.count(), 4)
 
         events = self.medium2.get_filtered_events_queryset(
             start_time=None,
@@ -762,7 +772,7 @@ class MediumGetEventFiltersTest(TestCase):
             include_expired=False,
             actor=None
         )
-        self.assertEqual(events.count(), 1)
+        self.assertEqual(events.count(), 4)
 
     def test_actor(self):
         events = self.medium.get_filtered_events_queryset(
@@ -968,7 +978,7 @@ class UnseenEventIdsTest(TestCase):
         Event.objects.filter(id=event2.id).mark_seen(medium2)
         Event.objects.filter(id=event3.id).mark_seen(medium2)
         unseen_ids = _unseen_event_ids(medium1)
-        self.assertEqual(set(unseen_ids), {event1.id})
+        self.assertEqual(set(unseen_ids), {event1.id, event3.id, event4.id})
         unseen_ids = _unseen_event_ids(medium2)
         self.assertEqual(set(unseen_ids), {event1.id, event4.id})
 

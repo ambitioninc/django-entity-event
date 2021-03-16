@@ -362,7 +362,7 @@ class Medium(models.Model):
         for event in events:
             targets = []
             for sub in subscriptions:
-                if event.source_id != sub.source_id:  # pragma: no cover
+                if event.source_id != sub.source_id:
                     continue
 
                 subscribed = subscribed_cache[sub.id]
@@ -476,12 +476,7 @@ class Medium(models.Model):
         now = datetime.utcnow()
 
         # Keep track of the filters we want to apply
-        # Limit to only sources that this medium is subscribed to
-        filters = [Q(
-            source_id__in=Subscription.objects.filter(
-                medium=self
-            ).values_list('source_id', flat=True)
-        )]
+        filters = []
 
         # If we have a start time add the filter
         if start_time is not None:
@@ -1249,9 +1244,6 @@ def _unseen_event_ids(medium):
             condition=Q(eventseen__medium=medium)
         )
     ).filter(
-        source_id__in=Subscription.objects.filter(
-            medium=medium
-        ).values_list('source_id', flat=True),
         event_seen_medium__id__isnull=True
     ).values_list('id', flat=True)
 
