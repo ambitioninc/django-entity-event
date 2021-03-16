@@ -310,27 +310,41 @@ class EventManagerQuerySetTest(TestCase):
 
 class MediumEventsInterfacesTest(TestCase):
     def setUp(self):
+        # Call the parent setup
+        super(MediumEventsInterfacesTest, self).setUp()
+
         # Set Up Entities and Relationships
         everyone_kind = G(EntityKind, name='all', display_name='all')
         group_kind = G(EntityKind, name='group', display_name='Group')
         self.person_kind = G(EntityKind, name='person', display_name='Person')
 
+        # Setup people entities
         self.p1 = G(Entity, entity_kind=self.person_kind, display_name='p1')
         self.p2 = G(Entity, entity_kind=self.person_kind, display_name='p2')
         self.p3 = G(Entity, entity_kind=self.person_kind, display_name='p3')
         p4 = G(Entity, entity_kind=self.person_kind, display_name='p4')
 
+        # Setup group entities
         g1 = G(Entity, entity_kind=group_kind)
         g2 = G(Entity, entity_kind=group_kind)
 
+        # Setup the global entity
         everyone = G(Entity, entity_kind=everyone_kind)
 
+        # Assign entity relationships
+        # p1 and p2 are in group1, p3 and p4 are in group2
         for sup, sub in [(g1, self.p1), (g1, self.p2), (g2, self.p3), (g2, p4)]:
             G(EntityRelationship, super_entity=sup, sub_entity=sub)
+
+        # All people are in the everyone group
         for p in [self.p1, self.p2, self.p3, p4]:
             G(EntityRelationship, super_entity=everyone, sub_entity=p)
 
         # Set up Mediums, Sources, Subscriptions, Events
+        # We are creating 4 events
+        # 2 for source a, 1 has p1 as an actor, the other has no actors
+        # 1 for source b, for p2
+        # 1 for source c, for p2 and p3
         self.medium_x = G(Medium, name='x', display_name='x')
         self.medium_y = G(Medium, name='y', display_name='y')
         self.medium_z = G(Medium, name='z', display_name='z')
@@ -348,12 +362,34 @@ class MediumEventsInterfacesTest(TestCase):
         G(EventActor, event=e4, entity=self.p2)
         G(EventActor, event=e4, entity=self.p3)
 
-        G(Subscription, source=self.source_a, medium=self.medium_x, only_following=False,
-          entity=everyone, sub_entity_kind=self.person_kind)
-        G(Subscription, source=self.source_a, medium=self.medium_y, only_following=True,
-          entity=everyone, sub_entity_kind=self.person_kind)
-        G(Subscription, source=self.source_c, medium=self.medium_z, only_following=True,
-          entity=g1, sub_entity_kind=self.person_kind)
+        # Create subscriptions
+        # Source a is subscribed to medium x, for everyone of person not following
+        # source a is subscribed to medium y, for everyone of person, following
+        # source c is subscribed to medium z, for group1, following
+        G(
+            Subscription,
+            source=self.source_a,
+            medium=self.medium_x,
+            only_following=False,
+            entity=everyone,
+            sub_entity_kind=self.person_kind
+        )
+        G(
+            Subscription,
+            source=self.source_a,
+            medium=self.medium_y,
+            only_following=True,
+            entity=everyone,
+            sub_entity_kind=self.person_kind
+        )
+        G(
+            Subscription,
+            source=self.source_c,
+            medium=self.medium_z,
+            only_following=True,
+            entity=g1,
+            sub_entity_kind=self.person_kind
+        )
 
     def test_events_basic(self):
         events = self.medium_x.events()
@@ -368,11 +404,15 @@ class MediumEventsInterfacesTest(TestCase):
         self.assertEqual(len(events), 2)
 
     def test_entity_events_basic_mark_seen(self):
-        events = self.medium_x.entity_events(entity=self.p1, seen=False, mark_seen=True)
+        events = self.medium_x.entity_events(
+            entity=self.p1,
+            seen=False,
+            mark_seen=True
+        )
         self.assertEqual(len(events), 2)
-        # All unseen events should have been marked as seen, even if they werent related
-        # to the entity
-        self.assertEqual(len(EventSeen.objects.all()), 4)
+
+        # only the events related to the entity should be marked seen
+        self.assertEqual(len(EventSeen.objects.all()), 2)
 
     def test_entity_events_basic_unsubscribed(self):
         G(Unsubscription, entity=self.p1, source=self.source_a, medium=self.medium_x)
@@ -488,38 +528,60 @@ class MediumSubsetSubscriptionsTest(TestCase):
 
 class MediumGetFilteredEventsTest(TestCase):
     def setUp(self):
+        super(MediumGetFilteredEventsTest, self).setUp()
+
+        self.entity = G(Entity)
         self.medium = G(Medium)
+        self.source = G(Source)
+        G(Subscription, medium=self.medium, source=self.source, entity=self.entity, only_following=False)
 
     def test_get_unseen_events_some_seen_some_not(self):
-        seen_e = G(Event, context={})
+        seen_e = G(Event, context={}, source=self.source)
         G(EventSeen, event=seen_e, medium=self.medium)
-        unseen_e = G(Event, context={})
+        unseen_e = G(Event, context={}, source=self.source)
 
         events = self.medium.get_filtered_events(seen=False)
         self.assertEquals(list(events), [unseen_e])
 
     def test_get_unseen_events_some_seen_from_other_mediums(self):
         seen_from_other_medium_e = G(Event, context={})
+        seen_from_medium_event = G(Event, context={}, source=self.source)
+        unseen_e = G(Event, context={}, source=self.source)
         G(EventSeen, event=seen_from_other_medium_e)
-        unseen_e = G(Event, context={})
+        G(EventSeen, event=seen_from_medium_event)
 
         events = self.medium.get_filtered_events(seen=False)
-        self.assertEquals(set(events), set([unseen_e, seen_from_other_medium_e]))
+        self.assertEquals(set(events), {unseen_e, seen_from_medium_event})
 
 
 class MediumGetEventFiltersTest(TestCase):
     def setUp(self):
+        # Call the parent setup
+        super(MediumGetEventFiltersTest, self).setUp()
+
+        # Create some entities
+        self.entity = G(Entity)
+        self.entity2 = G(Entity)
+
+        # Create some sources
+        self.source = G(Source)
+        self.source2 = G(Source)
+
         # Make a couple mediums
         self.medium = G(Medium)
         self.medium2 = G(Medium)
 
+        # Make subscriptions to different sources and mediums
+        G(Subscription, medium=self.medium, source=self.source, entity=self.entity, only_following=False)
+        G(Subscription, medium=self.medium2, source=self.source2, entity=self.entity2, only_following=False)
+
         with freeze_time('2014-01-15'):
-            self.event1 = G(Event, context={})
-            self.event2 = G(Event, context={}, time_expires=datetime(5000, 1, 1))
+            self.event1 = G(Event, context={}, source=self.source)
+            self.event2 = G(Event, context={}, source=self.source, time_expires=datetime(5000, 1, 1))
         with freeze_time('2014-01-17'):
-            self.event3 = G(Event, context={})
-            self.event4 = G(Event, context={})
-            self.event5 = G(Event, context={}, time_expires=datetime(2014, 1, 17))
+            self.event3 = G(Event, context={}, source=self.source)
+            self.event4 = G(Event, context={}, source=self.source2)
+            self.event5 = G(Event, context={}, source=self.source2, time_expires=datetime(2014, 1, 17))
 
         # Mark one event as seen by the medium
         G(EventSeen, event=self.event1, medium=self.medium)
@@ -528,62 +590,101 @@ class MediumGetEventFiltersTest(TestCase):
         G(EventActor, event=self.event1, entity=self.actor)
 
     def test_start_time(self):
-        filters = self.medium.get_filtered_events_queries(datetime(2014, 1, 16), None, None, True, None)
-        events = Event.objects.filter(*filters)
-        self.assertEqual(events.count(), 3)
-
-    def test_end_time(self):
-        filters = self.medium.get_filtered_events_queries(None, datetime(2014, 1, 16), None, True, None)
-        events = Event.objects.filter(*filters)
-        self.assertEqual(events.count(), 2)
-
-    def test_is_seen(self):
-        filters = self.medium.get_filtered_events_queries(None, None, True, True, None)
-        events = Event.objects.filter(*filters)
+        events = self.medium.get_filtered_events_queryset(
+            start_time=datetime(2014, 1, 16),
+            end_time=None,
+            seen=None,
+            include_expired=True,
+            actor=None
+        )
         self.assertEqual(events.count(), 1)
 
+        events = self.medium2.get_filtered_events_queryset(
+            start_time=datetime(2014, 1, 16),
+            end_time=None,
+            seen=None,
+            include_expired=True,
+            actor=None
+        )
+        self.assertEqual(events.count(), 2)
+
+    def test_end_time(self):
+        events = self.medium.get_filtered_events_queryset(
+            start_time=None,
+            end_time=datetime(2014, 1, 16),
+            seen=None,
+            include_expired=True,
+            actor=None
+        )
+        self.assertEqual(events.count(), 2)
+
+        events = self.medium2.get_filtered_events_queryset(
+            start_time=None,
+            end_time=datetime(2014, 1, 16),
+            seen=None,
+            include_expired=True,
+            actor=None
+        )
+        self.assertEqual(events.count(), 0)
+
+    def test_is_seen(self):
+        events = self.medium.get_filtered_events_queryset(
+            start_time=None,
+            end_time=None,
+            seen=True,
+            include_expired=True,
+            actor=None
+        )
+        self.assertEqual(events.count(), 1)
+
+        events = self.medium2.get_filtered_events_queryset(
+            start_time=None,
+            end_time=None,
+            seen=True,
+            include_expired=True,
+            actor=None
+        )
+        self.assertEqual(events.count(), 0)
+
     def test_is_not_seen(self):
-        filters = self.medium.get_filtered_events_queries(
+        events = self.medium.get_filtered_events_queryset(
             start_time=None,
             end_time=None,
             seen=False,
             include_expired=True,
             actor=None
         )
-        events = Event.objects.filter(*filters)
-        self.assertEqual(events.count(), 4)
+        self.assertEqual(events.count(), 2)
 
         # Make sure these are the events we expect
         event_ids = {event.id for event in events}
-        expected_ids = {self.event2.id, self.event3.id, self.event4.id, self.event5.id}
+        expected_ids = {self.event2.id, self.event3.id}
         self.assertEqual(event_ids, expected_ids)
 
         # Mark these all as seen
         Event.objects.filter(id__in=expected_ids).mark_seen(self.medium)
 
         # Make sure there are no unseen
-        filters = self.medium.get_filtered_events_queries(
+        events = self.medium.get_filtered_events_queryset(
             start_time=None,
             end_time=None,
             seen=False,
             include_expired=True,
             actor=None
         )
-        events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 0)
 
         # Delete one of the events from seen
         EventSeen.objects.filter(medium=self.medium, event=self.event3).delete()
 
         # Make sure there is one unseen
-        filters = self.medium.get_filtered_events_queries(
+        events = self.medium.get_filtered_events_queryset(
             start_time=None,
             end_time=None,
             seen=False,
             include_expired=True,
             actor=None
         )
-        events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 1)
         self.assertEqual(events[0].id, self.event3.id)
 
@@ -591,56 +692,86 @@ class MediumGetEventFiltersTest(TestCase):
         Event.objects.filter(id=self.event3.id).mark_seen(self.medium)
 
         # Make sure there are no unseen
-        filters = self.medium.get_filtered_events_queries(
+        events = self.medium.get_filtered_events_queryset(
             start_time=None,
             end_time=None,
             seen=False,
             include_expired=True,
             actor=None
         )
-        events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 0)
 
         # Make a new event
-        self.event6 = G(Event, context={})
+        self.event6 = G(Event, context={}, source=self.source)
 
         # Make sure the new event shows up
         # Make sure there is one unseen
-        filters = self.medium.get_filtered_events_queries(
+        events = self.medium.get_filtered_events_queryset(
             start_time=None,
             end_time=None,
             seen=False,
             include_expired=True,
             actor=None
         )
-        events = Event.objects.filter(*filters)
         self.assertEqual(events.count(), 1)
         self.assertEqual(events[0].id, self.event6.id)
 
         # Check the other medium
-        filters = self.medium2.get_filtered_events_queries(
+        events = self.medium2.get_filtered_events_queryset(
             start_time=None,
             end_time=None,
             seen=False,
             include_expired=True,
             actor=None
         )
-        events = Event.objects.filter(*filters)
-        self.assertEqual(events.count(), 6)
+        self.assertEqual(events.count(), 2)
 
     def test_include_expires(self):
-        filters = self.medium.get_filtered_events_queries(None, None, None, True, None)
-        events = Event.objects.filter(*filters)
-        self.assertEqual(events.count(), 5)
+        events = self.medium.get_filtered_events_queryset(
+            start_time=None,
+            end_time=None,
+            seen=None,
+            include_expired=True,
+            actor=None
+        )
+        self.assertEqual(events.count(), 3)
+
+        events = self.medium2.get_filtered_events_queryset(
+            start_time=None,
+            end_time=None,
+            seen=None,
+            include_expired=True,
+            actor=None
+        )
+        self.assertEqual(events.count(), 2)
 
     def test_dont_include_expires(self):
-        filters = self.medium.get_filtered_events_queries(None, None, None, False, None)
-        events = Event.objects.filter(*filters)
-        self.assertEqual(events.count(), 4)
+        events = self.medium.get_filtered_events_queryset(
+            start_time=None,
+            end_time=None,
+            seen=None,
+            include_expired=False,
+            actor=None
+        )
+        self.assertEqual(events.count(), 3)
+
+        events = self.medium2.get_filtered_events_queryset(
+            start_time=None,
+            end_time=None,
+            seen=None,
+            include_expired=False,
+            actor=None
+        )
+        self.assertEqual(events.count(), 1)
 
     def test_actor(self):
-        filters = self.medium.get_filtered_events_queries(None, None, None, True, self.actor)
-        events = Event.objects.filter(*filters)
+        events = self.medium.get_filtered_events_queryset(
+            start_time=None,
+            end_time=None,
+            seen=None,
+            include_expired=True,
+            actor=self.actor
+        )
         self.assertEqual(events.count(), 1)
 
 
@@ -809,24 +940,37 @@ class ContextRendererGetSerializedContextTests(TestCase):
 
 class UnseenEventIdsTest(TestCase):
     def test_filters_seen(self):
-        m = G(Medium)
-        e1 = G(Event, context={})
-        e2 = G(Event, context={})
-        Event.objects.filter(id=e2.id).mark_seen(m)
-        unseen_ids = _unseen_event_ids(m)
-        self.assertEqual(unseen_ids, [e1.id])
+        entity = G(Entity)
+        medium = G(Medium)
+        source = G(Source)
+        G(Subscription, entity=entity, source=source, medium=medium)
+        e1 = G(Event, context={}, source=source)
+        e2 = G(Event, context={}, source=source)
+        Event.objects.filter(id=e2.id).mark_seen(medium)
+        unseen_ids = _unseen_event_ids(medium)
+        self.assertEqual(set(unseen_ids), {e1.id})
 
     def test_multiple_mediums(self):
-        m1 = G(Medium)
-        m2 = G(Medium)
-        e1 = G(Event, context={})
-        e2 = G(Event, context={})
-        e3 = G(Event, context={})
-        e4 = G(Event, context={})
-        Event.objects.filter(id=e2.id).mark_seen(m1)
-        Event.objects.filter(id=e3.id).mark_seen(m2)
-        unseen_ids = _unseen_event_ids(m1)
-        self.assertEqual(set(unseen_ids), set([e1.id, e3.id, e4.id]))
+        entity1 = G(Entity)
+        entity2 = G(Entity)
+        source1 = G(Source)
+        source2 = G(Source)
+        medium1 = G(Medium)
+        medium2 = G(Medium)
+        G(Subscription, entity=entity1, source=source1, medium=medium1)
+        G(Subscription, entity=entity1, source=source1, medium=medium2)
+        G(Subscription, entity=entity2, source=source2, medium=medium2)
+        event1 = G(Event, context={}, source=source1)
+        event2 = G(Event, context={}, source=source1)
+        event3 = G(Event, context={}, source=source2)
+        event4 = G(Event, context={}, source=source2)
+        Event.objects.filter(id=event2.id).mark_seen(medium1)
+        Event.objects.filter(id=event2.id).mark_seen(medium2)
+        Event.objects.filter(id=event3.id).mark_seen(medium2)
+        unseen_ids = _unseen_event_ids(medium1)
+        self.assertEqual(set(unseen_ids), {event1.id, event3.id, event4.id})
+        unseen_ids = _unseen_event_ids(medium2)
+        self.assertEqual(set(unseen_ids), {event1.id, event4.id})
 
 
 class UnicodeTest(TestCase):
