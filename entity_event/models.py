@@ -345,14 +345,19 @@ class Medium(models.Model):
         :rtype: List of tuples
         :returns: A list of tuples in the form ``(event, targets)`` where ``targets`` is a list of entities.
         """
+
+        # Get the filtered events
         events = self.get_filtered_events(**event_filters)
 
+        # Get all subscriptions associated with this medium
         subscriptions = Subscription.objects.filter(medium=self).select_related('entity')
 
+        # Build a cache of entities that are subscribed for each subscription
         subscribed_cache = {}
         for sub in subscriptions:
             subscribed_cache[sub.id] = sub.subscribed_entities()
 
+        # Build the event target pairs
         event_pairs = []
         for event in events:
             targets = []
@@ -382,6 +387,7 @@ class Medium(models.Model):
             if targets:
                 event_pairs.append((event, targets))
 
+        # Return the event pairs
         return event_pairs
 
     def subset_subscriptions(self, subscriptions, entity=None):
@@ -442,24 +448,36 @@ class Medium(models.Model):
         unsubscriptions = self.unsubscriptions
         return [t for t in targets if t.id not in unsubscriptions[source_id]]
 
-    def get_filtered_events_queries(self, start_time, end_time, seen, include_expired, actor):
+    def get_filtered_events_queryset(self, start_time, end_time, seen, include_expired, actor, queryset=None):
         """
-        Return Q objects to filter events table to relevant events.
+        Return a filtered events queryset to relevant events for the passed arguments.
 
         The filters that are applied are those passed in from the
         method that is querying the events table: One of ``events``,
         ``entity_events`` or ``events_targets``. The arguments have
         the behavior documented in those methods.
 
-        :rtype: List of Q objects
-        :returns: A list of Q objects, which can be used as arguments
-            to ``Event.objects.filter``.
+        :rtype: EventQuerySet
+        :returns: A filtered event queryset
         """
+
+        # Create a default queryset if one is not passed
+        if queryset is None:
+            queryset = Event.objects
+
+        # Apply the seen annotation
+        queryset = queryset.annotate(
+            event_seen_medium=models.FilteredRelation(
+                'eventseen',
+                condition=Q(eventseen__medium=self)
+            )
+        )
 
         # Setup a default time to use
         now = datetime.utcnow()
 
         # Keep track of the filters we want to apply
+        # Limit to only sources that this medium is subscribed to
         filters = []
 
         # If we have a start time add the filter
@@ -480,15 +498,14 @@ class Medium(models.Model):
 
         # If we only want unseen events exclude events that have been seen for this medium
         elif seen is False:
-            unseen_ids = _unseen_event_ids(medium=self)
-            filters.append(Q(id__in=unseen_ids))
+            filters.append(Q(event_seen_medium__id__isnull=True))
 
         # Filter by actor
         if actor is not None:
             filters.append(Q(eventactor__entity=actor))
 
-        # Return the filters to apply
-        return filters
+        # Return the filtered queryset
+        return queryset.filter(*filters)
 
     def get_filtered_events(
         self,
@@ -503,20 +520,26 @@ class Medium(models.Model):
         Retrieves events, filters by event level filters, and marks them as
         seen if necessary.
 
-        :rtype: EventQuerySet
+        :rtype: List of Event
         :returns: All events which match the given filters.
         """
 
-        # What does this do???
-        filtered_events_queries = self.get_filtered_events_queries(start_time, end_time, seen, include_expired, actor)
-        events = Event.objects.filter(*filtered_events_queries)
+        # Get the events
+        events = self.get_filtered_events_queryset(
+            start_time=start_time,
+            end_time=end_time,
+            seen=seen,
+            include_expired=include_expired,
+            actor=actor,
+            queryset=Event.objects
+        )
 
         if seen is False and mark_seen:
-            # Evaluate the event qset here and create a new queryset that is no longer filtered by
+            # Evaluate the event queryset here and create a new queryset that is no longer filtered by
             # if the events are marked as seen. We do this because we want to mark the events
             # as seen in the next line of code. If we didn't evaluate the qset here first, it result
             # in not returning unseen events since they are marked as seen.
-            events = Event.objects.filter(id__in=list(e.id for e in events))
+            events = Event.objects.filter(id__in=list(events.values_list('id', flat=True)))
             events.mark_seen(self)
 
         # Return the events
@@ -1217,24 +1240,14 @@ def _unseen_event_ids(medium):
     """
     Return all events that have not been seen on this medium.
     """
-    query = '''
-        SELECT
-            event.id
-        FROM
-            entity_event_event AS event
-        LEFT JOIN (
-            SELECT seen.event_id, seen.medium_id
-            FROM entity_event_eventseen AS seen
-            WHERE seen.medium_id=%s
-        ) AS eventseen
-        ON event.id = eventseen.event_id
-        WHERE eventseen.medium_id IS NULL
-    '''
-    with connection.cursor() as cursor:
-        cursor.execute(query, [medium.id])
-        rows = cursor.fetchall()
-
-    return [row[0] for row in rows]
+    return Event.objects.annotate(
+        event_seen_medium=models.FilteredRelation(
+            'eventseen',
+            condition=Q(eventseen__medium=medium)
+        )
+    ).filter(
+        event_seen_medium__id__isnull=True
+    ).values_list('id', flat=True)
 
 
 class RenderingStyle(models.Model):

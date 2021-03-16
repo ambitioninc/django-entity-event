@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+v2.2.1
+------
+* Fix bad queryset check which would cause it to evaluate. Add explicit None check.
+
+v2.2.0
+------
+* More optimizations for unseen events
+* [!!!BREAKING!!!] Renamed `get_filtered_events_queries` to `get_filtered_events_queryset` on the `Medium` model and it now returns an `Event` queryset
+
+v2.1.0
+------
+* Optimize querying for unseen events
+
 v2.0.0
 ------
 * Optimize a few querysets
