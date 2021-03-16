@@ -462,7 +462,8 @@ class Medium(models.Model):
         """
 
         # Create a default queryset if one is not passed
-        queryset = queryset or Event.objects.all()
+        if queryset is None:
+            queryset = Event.objects
 
         # Apply the seen annotation
         queryset = queryset.annotate(
@@ -476,6 +477,7 @@ class Medium(models.Model):
         now = datetime.utcnow()
 
         # Keep track of the filters we want to apply
+        # Limit to only sources that this medium is subscribed to
         filters = []
 
         # If we have a start time add the filter
@@ -529,7 +531,7 @@ class Medium(models.Model):
             seen=seen,
             include_expired=include_expired,
             actor=actor,
-            queryset=Event.objects.all()
+            queryset=Event.objects
         )
 
         if seen is False and mark_seen:
