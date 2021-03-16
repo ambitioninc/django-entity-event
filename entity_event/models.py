@@ -1258,7 +1258,9 @@ def _unseen_event_ids(medium):
             condition=Q(eventseen__medium=medium)
         )
     ).filter(
-        # source__subscription__medium=medium,
+        source_id__in=Subscription.objects.filter(
+            medium=medium
+        ).values_list('source_id', flat=True),
         event_seen_medium__id__isnull=True
     ).values_list('id', flat=True)
 

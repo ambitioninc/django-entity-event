@@ -968,7 +968,7 @@ class UnseenEventIdsTest(TestCase):
         Event.objects.filter(id=event2.id).mark_seen(medium2)
         Event.objects.filter(id=event3.id).mark_seen(medium2)
         unseen_ids = _unseen_event_ids(medium1)
-        self.assertEqual(set(unseen_ids), {event1.id, event3.id, event4.id})
+        self.assertEqual(set(unseen_ids), {event1.id})
         unseen_ids = _unseen_event_ids(medium2)
         self.assertEqual(set(unseen_ids), {event1.id, event4.id})
 
