@@ -1,11 +1,11 @@
 .. image:: https://travis-ci.org/ambitioninc/django-entity-event.png
    :target: https://travis-ci.org/ambitioninc/django-entity-event
 
-.. image:: https://pypip.in/v/django-entity-event/badge.png
+.. image:: https://img.shields.io/pypi/v/django-entity-event.svg
     :target: https://crate.io/packages/django-entity-event/
     :alt: Latest PyPI version
 
-.. image:: https://pypip.in/d/django-entity-event/badge.png
+.. image:: https://img.shields.io/pypi/dm/django-entity-event.svg
     :target: https://crate.io/packages/django-entity-event/
     :alt: Number of PyPI downloads
 
