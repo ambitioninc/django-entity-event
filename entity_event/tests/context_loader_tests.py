@@ -1,4 +1,4 @@
-import django
+from django import VERSION
 from django.test import TestCase
 from django.test.utils import override_settings
 from django_dynamic_fixture import N, G
@@ -772,7 +772,7 @@ class LoadContextsAndRenderersTest(TestCase):
         # SELECT "entity_event_sourcegroup".* FROM "entity_event_sourcegroup"
         # WHERE "entity_event_sourcegroup"."id" IN (NULL)
         num_queries = 5
-        if (django.VERSION[0] == 3 and django.VERSION[1] >= 2) or django.VERSION[0] >= 4:
+        if (VERSION[0] == 3 and VERSION[1] >= 2) or VERSION[0] >= 4:  # pragma: nocover
             num_queries = 4
 
         with self.assertNumQueries(num_queries):
