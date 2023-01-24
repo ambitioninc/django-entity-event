@@ -78,7 +78,7 @@ jobs:
           }
       run: |
         coverage run manage.py test entity_event
-        coverage report --fail-under=99
+        coverage report --fail-under=100
       continue-on-error: ${{ matrix.experimental }}
     - name: Check style
       run: flake8 entity_event
