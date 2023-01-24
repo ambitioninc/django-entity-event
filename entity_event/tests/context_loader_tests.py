@@ -1,3 +1,4 @@
+import django
 from django.test import TestCase
 from django.test.utils import override_settings
 from django_dynamic_fixture import N, G
@@ -766,14 +767,15 @@ class LoadContextsAndRenderersTest(TestCase):
         e3 = G(models.Event, context={'key2': test_fk_m1.id, 'key': test_m1.id}, source=s2)
         e4 = G(models.Event, context={'key2': test_fk_m2.id}, source=s2)
 
+        # It appears that django >= 3.2 only needs 4 queries because it ignores an "Id in (NULL)" query for the source
+        # group
+        # SELECT "entity_event_sourcegroup".* FROM "entity_event_sourcegroup"
+        # WHERE "entity_event_sourcegroup"."id" IN (NULL)
         num_queries = 5
-
-        # It appears that django >= 3.2 only needs 4 queries
-        # TODO: check version
-        if False:
+        if (django.VERSION[0] == 3 and django.VERSION[1] >= 2) or django.VERSION[0] >= 4:
             num_queries = 4
 
-        with self.assertNumQueries(6):
+        with self.assertNumQueries(num_queries):
             context_loader.load_contexts_and_renderers([e1, e2, e3, e4], [medium1, medium2])
             self.assertEquals(e1.context['key'].fk, fk1)
             self.assertEquals(e2.context['key'][0].fk, fk1)
