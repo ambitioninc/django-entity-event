@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+v3.0.0
+------
+* drop python 3.6
+* support python 3.8, 3.9
+* django 3.2, 4.0, 4.1
+
 v2.2.1
 ------
 * Fix bad queryset check which would cause it to evaluate. Add explicit None check.

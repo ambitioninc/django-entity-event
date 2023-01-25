@@ -6,7 +6,7 @@ from six.moves import reduce
 from cached_property import cached_property
 from django.contrib.postgres.fields import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
-from django.db import models, transaction, connection
+from django.db import models, transaction
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.template.loader import render_to_string
