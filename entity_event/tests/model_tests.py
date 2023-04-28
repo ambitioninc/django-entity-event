@@ -5,7 +5,7 @@ from django.test import TestCase
 from django_dynamic_fixture import N, G
 from entity.models import Entity, EntityKind, EntityRelationship
 from freezegun import freeze_time
-from mock import patch, call, Mock
+from unittest.mock import patch, call, Mock
 from six import text_type
 
 from entity_event.models import (

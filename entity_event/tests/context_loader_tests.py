@@ -2,7 +2,7 @@ from django import VERSION
 from django.test import TestCase
 from django.test.utils import override_settings
 from django_dynamic_fixture import N, G
-from mock import patch
+from unittest.mock import patch
 
 from entity_event import context_loader
 from entity_event import models
