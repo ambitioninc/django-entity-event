@@ -16,13 +16,13 @@ class TestGetDefaultRenderingStyle(TestCase):
     @override_settings(DEFAULT_ENTITY_EVENT_RENDERING_STYLE='short')
     def test_defined(self):
         rs = G(models.RenderingStyle, name='short')
-        self.assertEquals(context_loader.get_default_rendering_style(), rs)
+        self.assertEqual(context_loader.get_default_rendering_style(), rs)
 
 
 class TestGetContextHintsFromSource(TestCase):
     def test_no_context_renderers(self):
         res = context_loader.get_context_hints_per_source([])
-        self.assertEquals(res, {})
+        self.assertEqual(res, {})
 
     @patch.object(models.ContextRenderer, 'get_sources', spec_set=True)
     def test_one_context_renderer(self, mock_get_sources):
@@ -37,7 +37,7 @@ class TestGetContextHintsFromSource(TestCase):
                 },
             })
         ])
-        self.assertEquals(res, {
+        self.assertEqual(res, {
             source: {
                 'key': {
                     'app_name': 'entity_event.tests',
@@ -77,7 +77,7 @@ class TestGetContextHintsFromSource(TestCase):
                 },
             })
         ])
-        self.assertEquals(res, {
+        self.assertEqual(res, {
             source1: {
                 'key': {
                     'app_name': 'entity_event.tests',
@@ -100,7 +100,7 @@ class TestGetContextHintsFromSource(TestCase):
 class TestGetQuerysetsForContextHints(TestCase):
     def test_no_context_hints(self):
         qsets = context_loader.get_querysets_for_context_hints({})
-        self.assertEquals(qsets, {})
+        self.assertEqual(qsets, {})
 
     def test_one_context_hint_no_select_related(self):
         source = N(models.Source, id=1)
@@ -112,7 +112,7 @@ class TestGetQuerysetsForContextHints(TestCase):
                 },
             },
         })
-        self.assertEquals(qsets, {
+        self.assertEqual(qsets, {
             test_models.TestModel: test_models.TestModel.objects
         })
 
@@ -139,7 +139,7 @@ class TestGetQuerysetsForContextHints(TestCase):
         # Django < 1.7 and 1.8 have spaces before/after parentheses
         actual_sql = actual_sql.replace('( ', '(').replace(' )', ')')
 
-        self.assertEquals(actual_sql, expected_sql)
+        self.assertEqual(actual_sql, expected_sql)
 
     def test_multiple_context_hints_w_multiple_select_related(self):
         source = N(models.Source, id=1)
@@ -175,7 +175,7 @@ class TestGetQuerysetsForContextHints(TestCase):
         # Django < 1.7 and 1.8 have spaces before/after parentheses
         actual_sql = actual_sql.replace('( ', '(').replace(' )', ')')
 
-        self.assertEquals(actual_sql, expected_sql)
+        self.assertEqual(actual_sql, expected_sql)
 
     def test_multiple_context_hints_w_multiple_select_related_multiple_prefetch_related(self):
         source = N(models.Source, id=1)
@@ -214,7 +214,7 @@ class TestGetQuerysetsForContextHints(TestCase):
         # Django < 1.7 and 1.8 have spaces before/after parentheses
         actual_sql = actual_sql.replace('( ', '(').replace(' )', ')')
 
-        self.assertEquals(actual_sql, expected_sql)
+        self.assertEqual(actual_sql, expected_sql)
 
 
 class TestGetQuerysetsForContextHintsDbTests(TestCase):
@@ -248,18 +248,18 @@ class TestGetQuerysetsForContextHintsDbTests(TestCase):
 
         with self.assertNumQueries(2):
             v = qsets[test_models.TestModel].get(id=o.id)
-            self.assertEquals(v.fk, fk)
-            self.assertEquals(v.fk2, fk2)
-            self.assertEquals(set(v.fk_m2m.all()), set(m2ms))
+            self.assertEqual(v.fk, fk)
+            self.assertEqual(v.fk2, fk2)
+            self.assertEqual(set(v.fk_m2m.all()), set(m2ms))
 
 
 class DictFindTest(TestCase):
     def test_dict_find_none(self):
-        self.assertEquals(list(context_loader.dict_find({}, 'key')), [])
+        self.assertEqual(list(context_loader.dict_find({}, 'key')), [])
 
     def test_dict_find_list_key(self):
         d = {'key': ['value']}
-        self.assertEquals(list(context_loader.dict_find(d, 'key')), [(d, ['value'])])
+        self.assertEqual(list(context_loader.dict_find(d, 'key')), [(d, ['value'])])
 
     def test_dict_find_nested_list_key(self):
         d = {'key': ['value']}
@@ -270,7 +270,7 @@ class DictFindTest(TestCase):
                 'hi2': d
             }]
         }
-        self.assertEquals(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value'])])
+        self.assertEqual(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value'])])
 
     def test_dict_find_double_nested_list_key(self):
         d = {'key': ['value']}
@@ -282,7 +282,7 @@ class DictFindTest(TestCase):
             }],
             'hi3': d
         }
-        self.assertEquals(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value']), (d, ['value'])])
+        self.assertEqual(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value']), (d, ['value'])])
 
     def test_dict_find_deep_nested_list_key(self):
         d = {'key': ['value']}
@@ -294,16 +294,16 @@ class DictFindTest(TestCase):
             }],
             'hi3': d
         }]]
-        self.assertEquals(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value']), (d, ['value'])])
+        self.assertEqual(list(context_loader.dict_find(larger_dict, 'key')), [(d, ['value']), (d, ['value'])])
 
 
 class GetModelIdsToFetchTest(TestCase):
     def test_no_events(self):
-        self.assertEquals(context_loader.get_model_ids_to_fetch([], {}), {})
+        self.assertEqual(context_loader.get_model_ids_to_fetch([], {}), {})
 
     def test_no_context_hints(self):
         e = N(models.Event, id=1, context={})
-        self.assertEquals(context_loader.get_model_ids_to_fetch([e], {}), {})
+        self.assertEqual(context_loader.get_model_ids_to_fetch([e], {}), {})
 
     def test_w_one_event_one_context_hint_single_pk(self):
         source = N(models.Source, id=1)
@@ -316,7 +316,7 @@ class GetModelIdsToFetchTest(TestCase):
             },
         }
         e = N(models.Event, context={'key': 2}, source=source)
-        self.assertEquals(context_loader.get_model_ids_to_fetch([e], hints), {
+        self.assertEqual(context_loader.get_model_ids_to_fetch([e], hints), {
             test_models.TestModel: set([2])
         })
 
@@ -331,7 +331,7 @@ class GetModelIdsToFetchTest(TestCase):
             },
         }
         e = N(models.Event, context={'key': [2, 3, 5]}, source=source)
-        self.assertEquals(context_loader.get_model_ids_to_fetch([e], hints), {
+        self.assertEqual(context_loader.get_model_ids_to_fetch([e], hints), {
             test_models.TestModel: set([2, 3, 5])
         })
 
@@ -347,7 +347,7 @@ class GetModelIdsToFetchTest(TestCase):
         }
         e1 = N(models.Event, context={'key': [2, 3, 5]}, source=source)
         e2 = N(models.Event, context={'key': 88}, source=source)
-        self.assertEquals(context_loader.get_model_ids_to_fetch([e1, e2], hints), {
+        self.assertEqual(context_loader.get_model_ids_to_fetch([e1, e2], hints), {
             test_models.TestModel: set([2, 3, 5, 88])
         })
 
@@ -376,7 +376,7 @@ class GetModelIdsToFetchTest(TestCase):
         e2 = N(models.Event, context={'key': 88}, source=source1)
         e3 = N(models.Event, context={'key': 100, 'key2': [50]}, source=source2)
         e4 = N(models.Event, context={'key2': [60]}, source=source2)
-        self.assertEquals(context_loader.get_model_ids_to_fetch([e1, e2, e3, e4], hints), {
+        self.assertEqual(context_loader.get_model_ids_to_fetch([e1, e2, e3, e4], hints), {
             test_models.TestModel: set([2, 3, 5, 88, 100]),
             test_models.TestFKModel: set([50, 60])
         })
@@ -384,11 +384,11 @@ class GetModelIdsToFetchTest(TestCase):
 
 class FetchModelDataTest(TestCase):
     def test_none(self):
-        self.assertEquals({}, context_loader.fetch_model_data({}, {}))
+        self.assertEqual({}, context_loader.fetch_model_data({}, {}))
 
     def test_one_model_one_id_to_fetch(self):
         m1 = G(test_models.TestModel)
-        self.assertEquals({
+        self.assertEqual({
             test_models.TestModel: {m1.id: m1}
         }, context_loader.fetch_model_data({
             test_models.TestModel: test_models.TestModel.objects
@@ -400,7 +400,7 @@ class FetchModelDataTest(TestCase):
         m1 = G(test_models.TestModel)
         m2 = G(test_models.TestModel)
         m3 = G(test_models.TestFKModel)
-        self.assertEquals({
+        self.assertEqual({
             test_models.TestModel: {m1.id: m1, m2.id: m2},
             test_models.TestFKModel: {m3.id: m3}
         }, context_loader.fetch_model_data({
@@ -419,7 +419,7 @@ class LoadFetchedObjectsIntoContextsTest(TestCase):
     def test_event_with_no_model_data(self):
         e = N(models.Event, id=1, context={'hi', 'hi'})
         context_loader.load_fetched_objects_into_contexts([e], {}, {})
-        self.assertEquals(e, e)
+        self.assertEqual(e, e)
 
     def test_one_event_w_model_data(self):
         m = N(test_models.TestModel, id=2)
@@ -434,7 +434,7 @@ class LoadFetchedObjectsIntoContextsTest(TestCase):
         }
         e = N(models.Event, context={'key': m.id}, source=s)
         context_loader.load_fetched_objects_into_contexts([e], {test_models.TestModel: {m.id: m}}, hints)
-        self.assertEquals(e.context, {'key': m})
+        self.assertEqual(e.context, {'key': m})
 
     def test_one_event_w_list_model_data(self):
         m1 = N(test_models.TestModel, id=2)
@@ -450,20 +450,20 @@ class LoadFetchedObjectsIntoContextsTest(TestCase):
         }
         e = N(models.Event, context={'key': [m1.id, m2.id]}, source=s)
         context_loader.load_fetched_objects_into_contexts([e], {test_models.TestModel: {m1.id: m1, m2.id: m2}}, hints)
-        self.assertEquals(e.context, {'key': [m1, m2]})
+        self.assertEqual(e.context, {'key': [m1, m2]})
 
 
 class TestLoadRenderersIntoEvents(TestCase):
     def test_no_mediums_or_renderers(self):
         events = [N(models.Event, context={})]
         context_loader.load_renderers_into_events(events, [], [], None)
-        self.assertEquals(events[0]._context_renderers, {})
+        self.assertEqual(events[0]._context_renderers, {})
 
     def test_mediums_and_no_renderers(self):
         events = [N(models.Event, context={})]
         mediums = [N(models.Medium)]
         context_loader.load_renderers_into_events(events, mediums, [], None)
-        self.assertEquals(events[0]._context_renderers, {})
+        self.assertEqual(events[0]._context_renderers, {})
 
     def test_mediums_w_renderers(self):
         s1 = N(models.Source, id=1)
@@ -480,11 +480,11 @@ class TestLoadRenderersIntoEvents(TestCase):
 
         context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2, cr3], None)
 
-        self.assertEquals(e1._context_renderers, {
+        self.assertEqual(e1._context_renderers, {
             m1: cr1,
             m2: cr3,
         })
-        self.assertEquals(e2._context_renderers, {
+        self.assertEqual(e2._context_renderers, {
             m1: cr2
         })
 
@@ -502,11 +502,11 @@ class TestLoadRenderersIntoEvents(TestCase):
 
         context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2], None)
 
-        self.assertEquals(e1._context_renderers, {
+        self.assertEqual(e1._context_renderers, {
             m1: cr1,
             m2: cr2,
         })
-        self.assertEquals(e2._context_renderers, {
+        self.assertEqual(e2._context_renderers, {
             m1: cr1,
             m2: cr2,
         })
@@ -524,11 +524,11 @@ class TestLoadRenderersIntoEvents(TestCase):
 
         context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1], rs1)
 
-        self.assertEquals(e1._context_renderers, {
+        self.assertEqual(e1._context_renderers, {
             m1: cr1,
             m2: cr1,
         })
-        self.assertEquals(e2._context_renderers, {
+        self.assertEqual(e2._context_renderers, {
             m1: cr1,
             m2: cr1,
         })
@@ -550,11 +550,11 @@ class TestLoadRenderersIntoEvents(TestCase):
 
         context_loader.load_renderers_into_events([e1, e2], [m1, m2], [cr1, cr2, cr3], default_style)
 
-        self.assertEquals(e1._context_renderers, {
+        self.assertEqual(e1._context_renderers, {
             m1: cr1,
             m2: cr1,
         })
-        self.assertEquals(e2._context_renderers, {
+        self.assertEqual(e2._context_renderers, {
             m1: cr2,
             m2: cr2,
         })
@@ -570,7 +570,7 @@ class LoadContextsAndRenderersTest(TestCase):
     def test_no_mediums(self):
         e = G(models.Event, context={})
         context_loader.load_contexts_and_renderers([e], [])
-        self.assertEquals(e.context, {})
+        self.assertEqual(e.context, {})
 
     def test_one_render_target_one_event(self):
         m1 = G(test_models.TestModel)
@@ -586,7 +586,7 @@ class LoadContextsAndRenderersTest(TestCase):
         })
 
         context_loader.load_contexts_and_renderers([e], [medium])
-        self.assertEquals(e.context, {'key': m1})
+        self.assertEqual(e.context, {'key': m1})
 
     @override_settings(DEFAULT_ENTITY_EVENT_RENDERING_STYLE='short')
     def test_one_render_target_one_event_no_style_with_default(self):
@@ -603,7 +603,7 @@ class LoadContextsAndRenderersTest(TestCase):
         })
 
         context_loader.load_contexts_and_renderers([e], [medium])
-        self.assertEquals(e.context, {'key': m1})
+        self.assertEqual(e.context, {'key': m1})
 
     def test_multiple_render_targets_multiple_events(self):
         test_m1 = G(test_models.TestModel)
@@ -641,22 +641,22 @@ class LoadContextsAndRenderersTest(TestCase):
         e4 = G(models.Event, context={'key2': test_fk_m2.id}, source=s2)
 
         context_loader.load_contexts_and_renderers([e1, e2, e3, e4], [medium1, medium2])
-        self.assertEquals(e1.context, {'key': test_m1, 'key2': 'haha'})
-        self.assertEquals(e2.context, {'key': [test_m2, test_m3]})
-        self.assertEquals(e3.context, {'key2': test_fk_m1, 'key': test_m1})
-        self.assertEquals(e4.context, {'key2': test_fk_m2})
+        self.assertEqual(e1.context, {'key': test_m1, 'key2': 'haha'})
+        self.assertEqual(e2.context, {'key': [test_m2, test_m3]})
+        self.assertEqual(e3.context, {'key2': test_fk_m1, 'key': test_m1})
+        self.assertEqual(e4.context, {'key2': test_fk_m2})
 
         # Verify context renderers are put into the events properly
-        self.assertEquals(e1._context_renderers, {
+        self.assertEqual(e1._context_renderers, {
             medium1: cr1,
         })
-        self.assertEquals(e2._context_renderers, {
+        self.assertEqual(e2._context_renderers, {
             medium1: cr1,
         })
-        self.assertEquals(e3._context_renderers, {
+        self.assertEqual(e3._context_renderers, {
             medium2: cr2,
         })
-        self.assertEquals(e4._context_renderers, {
+        self.assertEqual(e4._context_renderers, {
             medium2: cr2,
         })
 
@@ -701,25 +701,25 @@ class LoadContextsAndRenderersTest(TestCase):
         e4 = G(models.Event, context={'key2': test_fk_m2.id}, source=s2)
 
         context_loader.load_contexts_and_renderers([e1, e2, e3, e4], [medium1, medium2])
-        self.assertEquals(e1.context, {'key': test_m1, 'key2': 'haha'})
-        self.assertEquals(e2.context, {'key': [test_m2, test_m3]})
-        self.assertEquals(e3.context, {'key2': test_fk_m1, 'key': test_m1})
-        self.assertEquals(e4.context, {'key2': test_fk_m2})
+        self.assertEqual(e1.context, {'key': test_m1, 'key2': 'haha'})
+        self.assertEqual(e2.context, {'key': [test_m2, test_m3]})
+        self.assertEqual(e3.context, {'key2': test_fk_m1, 'key': test_m1})
+        self.assertEqual(e4.context, {'key2': test_fk_m2})
 
         # Verify context renderers are put into the events properly
-        self.assertEquals(e1._context_renderers, {
+        self.assertEqual(e1._context_renderers, {
             medium1: cr1,
             medium2: cr1,
         })
-        self.assertEquals(e2._context_renderers, {
+        self.assertEqual(e2._context_renderers, {
             medium1: cr1,
             medium2: cr1,
         })
-        self.assertEquals(e3._context_renderers, {
+        self.assertEqual(e3._context_renderers, {
             medium1: cr2,
             medium2: cr2,
         })
-        self.assertEquals(e4._context_renderers, {
+        self.assertEqual(e4._context_renderers, {
             medium1: cr2,
             medium2: cr2,
         })
@@ -777,10 +777,10 @@ class LoadContextsAndRenderersTest(TestCase):
 
         with self.assertNumQueries(num_queries):
             context_loader.load_contexts_and_renderers([e1, e2, e3, e4], [medium1, medium2])
-            self.assertEquals(e1.context['key'].fk, fk1)
-            self.assertEquals(e2.context['key'][0].fk, fk1)
-            self.assertEquals(e1.context['key'].fk2, fk2)
-            self.assertEquals(e2.context['key'][0].fk2, fk2)
-            self.assertEquals(set(e1.context['key'].fk_m2m.all()), set([fk1, fk11]))
-            self.assertEquals(set(e2.context['key'][0].fk_m2m.all()), set([fk1, fk11]))
-            self.assertEquals(e3.context['key'].fk, fk1)
+            self.assertEqual(e1.context['key'].fk, fk1)
+            self.assertEqual(e2.context['key'][0].fk, fk1)
+            self.assertEqual(e1.context['key'].fk2, fk2)
+            self.assertEqual(e2.context['key'][0].fk2, fk2)
+            self.assertEqual(set(e1.context['key'].fk_m2m.all()), set([fk1, fk11]))
+            self.assertEqual(set(e2.context['key'][0].fk_m2m.all()), set([fk1, fk11]))
+            self.assertEqual(e3.context['key'].fk, fk1)

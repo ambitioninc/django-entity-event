@@ -39,8 +39,8 @@ class EventRenderTest(TestCase):
         events = Event.objects.all().load_contexts_and_renderers(m)
         txt, html = events[0].render(m)
 
-        self.assertEquals(txt, 'Test text template with value 100')
-        self.assertEquals(html, 'Test html template with value suppressed')
+        self.assertEqual(txt, 'Test text template with value 100')
+        self.assertEqual(html, 'Test html template with value suppressed')
 
     def test_one_context_renderer_one_medium(self):
         rg = G(RenderingStyle)
@@ -61,8 +61,8 @@ class EventRenderTest(TestCase):
         events = Event.objects.all().load_contexts_and_renderers(m)
         txt, html = events[0].render(m)
 
-        self.assertEquals(txt, 'Test text template with value 100')
-        self.assertEquals(html, 'Test html template with value 100')
+        self.assertEqual(txt, 'Test text template with value 100')
+        self.assertEqual(html, 'Test html template with value 100')
 
     def test_wo_fetching_contexts(self):
         rg = G(RenderingStyle)
@@ -292,9 +292,9 @@ class EventManagerQuerySetTest(TestCase):
         e = G(Event, context={})
         medium = G(Medium)
         Event.objects.load_contexts_and_renderers(medium)
-        self.assertEquals(mock_load_contexts_and_renderers.call_count, 1)
-        self.assertEquals(list(mock_load_contexts_and_renderers.call_args_list[0][0][0]), [e])
-        self.assertEquals(mock_load_contexts_and_renderers.call_args_list[0][0][1], [medium])
+        self.assertEqual(mock_load_contexts_and_renderers.call_count, 1)
+        self.assertEqual(list(mock_load_contexts_and_renderers.call_args_list[0][0][0]), [e])
+        self.assertEqual(mock_load_contexts_and_renderers.call_args_list[0][0][1], [medium])
 
     @patch.object(EventManager, 'get_queryset', autospec=True)
     def test_cache_related(self, mock_get_queryset):
@@ -489,7 +489,7 @@ class MediumRenderTest(TestCase):
         res = medium.render(events)
 
         mock_load_contexts_and_renderers.assert_called_once_with(events, [medium])
-        self.assertEquals(res, {
+        self.assertEqual(res, {
             e1: ('e1.txt', 'e1.html'),
             e2: ('e2.txt', 'e2.html'),
         })
@@ -541,7 +541,7 @@ class MediumGetFilteredEventsTest(TestCase):
         unseen_e = G(Event, context={}, source=self.source)
 
         events = self.medium.get_filtered_events(seen=False)
-        self.assertEquals(list(events), [unseen_e])
+        self.assertEqual(list(events), [unseen_e])
 
     def test_get_unseen_events_some_seen_from_other_mediums(self):
         seen_from_other_medium_e = G(Event, context={})
@@ -551,7 +551,7 @@ class MediumGetFilteredEventsTest(TestCase):
         G(EventSeen, event=seen_from_medium_event)
 
         events = self.medium.get_filtered_events(seen=False)
-        self.assertEquals(set(events), {unseen_e, seen_from_medium_event, seen_from_other_medium_e})
+        self.assertEqual(set(events), {unseen_e, seen_from_medium_event, seen_from_other_medium_e})
 
 
 class MediumGetEventFiltersTest(TestCase):
@@ -1002,11 +1002,11 @@ class UnicodeTest(TestCase):
 
     def test_RenderingStyle_formats(self):
         s = text_type(self.rendering_style)
-        self.assertEquals(s, 'Test Render Group test')
+        self.assertEqual(s, 'Test Render Group test')
 
     def test_contextrenderer_formats(self):
         s = text_type(self.context_renderer)
-        self.assertEquals(s, 'Test Context Renderer')
+        self.assertEqual(s, 'Test Context Renderer')
 
     def test_medium_formats(self):
         s = text_type(self.medium)
