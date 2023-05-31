@@ -7,8 +7,9 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
-    replaces = [('entity_event', '0001_initial'), ('entity_event', '0002_medium_creation_time'), ('entity_event', '0003_auto_20170830_1321'), ('entity_event', '0004_auto_20180403_1655'), ('entity_event', '0005_auto_20200409_1612')]
+    replaces = [('entity_event', '0001_initial'), ('entity_event', '0002_medium_creation_time'),
+                ('entity_event', '0003_auto_20170830_1321'), ('entity_event', '0004_auto_20180403_1655'),
+                ('entity_event', '0005_auto_20200409_1612')]
 
     dependencies = [
         ('entity', '0001_initial'),
