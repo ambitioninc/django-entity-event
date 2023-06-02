@@ -1,7 +1,6 @@
 import json
 from django.db import models
 from django.forms import model_to_dict
-import six
 
 
 class DefaultContextSerializer(object):
@@ -86,7 +85,7 @@ class DefaultContextSerializer(object):
         """
 
         # Check if the value might be a json string
-        if not isinstance(value, six.string_types):
+        if not isinstance(value, str):
             return value
 
         # Make sure it starts with a brace

@@ -2,17 +2,11 @@
 A module for loading contexts using context hints.
 """
 from collections import defaultdict
-import six
 
 from django.conf import settings
 from django.db.models import Q
-try:
-    # Django 1.9
-    from django.apps import apps
-    get_model = apps.get_model
-except ImportError:  # pragma: no cover
-    # Django < 1.9
-    from django.db.models import get_model
+from django.apps import apps
+get_model = apps.get_model
 from manager_utils import id_dict
 
 from entity_event.models import ContextRenderer
@@ -104,7 +98,7 @@ def get_model_ids_to_fetch(events, context_hints_per_source):
         ...
     }
     """
-    number_types = (complex, float) + six.integer_types
+    number_types = (complex, float, int)
     model_ids_to_fetch = defaultdict(set)
 
     for event in events:
