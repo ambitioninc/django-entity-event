@@ -1,10 +1,10 @@
 from collections import defaultdict
 from datetime import datetime
 from operator import or_
-from six.moves import reduce
+from functools import reduce
 
 from cached_property import cached_property
-from django.contrib.postgres.fields import JSONField
+from django.db.models import JSONField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models, transaction
 from django.db.models import Q

@@ -37,11 +37,29 @@ def configure_settings():
         settings.configure(
             TEST_RUNNER='django_nose.NoseTestSuiteRunner',
             SECRET_KEY='*',
+            DEFAULT_AUTO_FIELD='django.db.models.AutoField',
             NOSE_ARGS=['--nocapture', '--nologcapture', '--verbosity=1'],
-            MIDDLEWARE_CLASSES=(),
             DATABASES={
                 'default': db_config,
             },
+            INSTALLED_APPS=(
+                'django.contrib.auth',
+                'django.contrib.contenttypes',
+                'django.contrib.sessions',
+                'django.contrib.messages',
+                'django.contrib.admin',
+                'entity',
+                'entity_event',
+                'entity_event.tests',
+                'django_nose',
+            ),
+            ROOT_URLCONF='entity_event.urls',
+            DEBUG=False,
+            MIDDLEWARE=(
+                'django.contrib.auth.middleware.AuthenticationMiddleware',
+                'django.contrib.messages.middleware.MessageMiddleware',
+                'django.contrib.sessions.middleware.SessionMiddleware'
+            ),
             TEMPLATES=[
                 {
                     'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -56,16 +74,4 @@ def configure_settings():
                     }
                 }
             ],
-            INSTALLED_APPS=(
-                'django.contrib.auth',
-                'django.contrib.contenttypes',
-                'django.contrib.sessions',
-                'django.contrib.admin',
-                'entity',
-                'entity_event',
-                'entity_event.tests',
-                'django_nose',
-            ),
-            ROOT_URLCONF='entity_event.urls',
-            DEBUG=False,
         )
