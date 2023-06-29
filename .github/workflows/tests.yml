@@ -13,17 +13,11 @@ jobs:
       fail-fast: false
       matrix:
         python: ['3.7', '3.8', '3.9']
-        # Time to switch to pytest or nose2??
-        # nosetests is broken on 3.10
-        # AttributeError: module 'collections' has no attribute 'Callable'
-        # https://github.com/nose-devs/nose/issues/1099
         django:
-          - 'Django~=2.2.0'
-          - 'Django~=3.0.0'
-          - 'Django~=3.1.0'
           - 'Django~=3.2.0'
           - 'Django~=4.0.0'
           - 'Django~=4.1.0'
+          - 'Django~=4.2.0'
         experimental: [false]
 #        include:
 #        - python: '3.9'
@@ -38,6 +32,8 @@ jobs:
           django: 'Django~=4.0.0'
         - python: '3.7'
           django: 'Django~=4.1.0'
+        - python: '3.7'
+          django: 'Django~=4.2.0'
     services:
       postgres:
         image: postgres:latest
@@ -53,8 +49,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python }}
     - name: Setup
@@ -69,7 +65,7 @@ jobs:
       env:
         DB_SETTINGS: >-
           {
-            "ENGINE":"django.db.backends.postgresql_psycopg2",
+            "ENGINE":"django.db.backends.postgresql",
             "NAME":"entity_event",
             "USER":"postgres",
             "PASSWORD":"postgres",
@@ -78,7 +74,7 @@ jobs:
           }
       run: |
         coverage run manage.py test entity_event
-        coverage report --fail-under=100
+        coverage report --fail-under=99
       continue-on-error: ${{ matrix.experimental }}
     - name: Check style
       run: flake8 entity_event

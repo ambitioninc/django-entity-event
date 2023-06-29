@@ -1,4 +1,2 @@
 cached-property>=1.3.1
-django-entity>=5.0.0
-jsonfield>=0.9.20
-six
+django-entity>=6.1.0
