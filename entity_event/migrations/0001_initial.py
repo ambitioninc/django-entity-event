@@ -3,7 +3,6 @@
 from django.db import models, migrations
 import django.db.models.deletion
 import datetime
-import jsonfield.fields
 
 
 class Migration(migrations.Migration):
@@ -22,7 +21,7 @@ class Migration(migrations.Migration):
                 ('html_template_path', models.CharField(max_length=256, default='')),
                 ('text_template', models.TextField(default='')),
                 ('html_template', models.TextField(default='')),
-                ('context_hints', jsonfield.fields.JSONField(null=True, default=None)),
+                ('context_hints', models.JSONField(null=True, default=None)),
             ],
             options={
             },
