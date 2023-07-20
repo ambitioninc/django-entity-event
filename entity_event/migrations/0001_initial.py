@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
             name='Event',
             fields=[
                 ('id', models.AutoField(serialize=False, primary_key=True, auto_created=True, verbose_name='ID')),
-                ('context', jsonfield.fields.JSONField()),
+                ('context', models.JSONField()),
                 ('time', models.DateTimeField(auto_now_add=True, db_index=True)),
                 ('time_expires', models.DateTimeField(db_index=True, default=datetime.datetime(9999, 12, 31, 23, 59, 59, 999999))),
                 ('uuid', models.CharField(max_length=128, unique=True)),
@@ -69,7 +69,7 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(max_length=64, unique=True)),
                 ('display_name', models.CharField(max_length=64)),
                 ('description', models.TextField()),
-                ('additional_context', jsonfield.fields.JSONField(null=True, default=None)),
+                ('additional_context', models.JSONField(null=True, default=None)),
             ],
             options={
             },
