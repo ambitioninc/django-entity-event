@@ -18,6 +18,9 @@ jobs:
           - 'Django~=4.0.0'
           - 'Django~=4.1.0'
           - 'Django~=4.2.0'
+        psycopg:
+          - 'psycopg2==2.9.6'
+          - 'psycopg==3.1.10'
         experimental: [false]
 #        include:
 #        - python: '3.9'
@@ -27,6 +30,7 @@ jobs:
 #          # `continue-on-error: true`. Github Actions apparently does not
 #          # have this feature, similar to Travis' allow-failure, yet.
 #          # https://github.com/actions/toolkit/issues/399
+
         exclude:
         - python: '3.7'
           django: 'Django~=4.0.0'
@@ -34,6 +38,12 @@ jobs:
           django: 'Django~=4.1.0'
         - python: '3.7'
           django: 'Django~=4.2.0'
+        - psycopg: 'psycopg==3.1.10'
+          django: 'Django~=3.2.0'
+        - psycopg: 'psycopg==3.1.10'
+          django: 'Django~=4.0.0'
+        - psycopg: 'psycopg==3.1.10'
+          django: 'Django~=4.1.0'
     services:
       postgres:
         image: postgres:latest
@@ -60,6 +70,7 @@ jobs:
         pip install -r requirements/requirements.txt
         pip install -r requirements/requirements-testing.txt
         pip install "${{ matrix.django }}"
+        pip install "${{ matrix.psycopg }}"
         pip freeze
     - name: Run tests
       env:
